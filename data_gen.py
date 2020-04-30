@@ -16,6 +16,7 @@ class lsp_data(Dataset):
         self.stride = stride
         self.images_path = os.listdir(path)
         self.images_path = [path + img_path for img_path in self.images_path]
+        self.images_path = sorted(self.images_path)
         self.kpts_list, self.center_list = self.read_mat_file()
         self.img_size = img_size
 
@@ -44,7 +45,6 @@ class lsp_data(Dataset):
         image_path = self.images_path[idx]
         img = cv2.imread(image_path)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        print(img.shape)
         kpts = self.kpts_list[idx]
         center = self.center_list[idx]
         height, width, _ = img.shape
