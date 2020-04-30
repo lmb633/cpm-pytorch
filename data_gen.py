@@ -30,8 +30,8 @@ class lsp_data(Dataset):
             image = Image.open(self.images_path[i])
             w = image.size[0]
             h = image.size[1]
-            center_x = (lms[i][0][lms[i][0] < w].max() + lms[i][0][lms[i][0] > 0].min()) / 2
-            center_y = (lms[i][1][lms[i][1] < h].max() + lms[i][1][lms[i][1] > 0].min()) / 2
+            center_x = (max(lms[i][0][lms[i][0] < w]) + min(lms[i][0][lms[i][0] > 0])) / 2
+            center_y = (max(lms[i][1][lms[i][1] < h]) + min(lms[i][1][lms[i][1] > 0])) / 2
             centers.append([center_x, center_y])
         return kpts, centers
 
