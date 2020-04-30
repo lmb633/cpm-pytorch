@@ -103,3 +103,8 @@ def train_once(trainloader, model, criterion, optimizer, losses, epoch, args):
             print('epoch: {0} iter: {1}/{2} loss: {loss.val:.4f}({loss.avg:.4f})'.format(epoch, i, len(trainloader), loss=losses[0]))
 
     return losses[0].avg
+
+
+if __name__ == '__main__':
+    args = parse_args()
+    train(args)
