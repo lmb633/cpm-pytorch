@@ -5,3 +5,4 @@ test_imgs/*
 */__pycache__
 */*/__pycache__
 data/*
+__pycache__
