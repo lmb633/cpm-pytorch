@@ -6,3 +6,4 @@ test_imgs/*
 */*/__pycache__
 data/*
 __pycache__
+BEST_checkpoint.tar
