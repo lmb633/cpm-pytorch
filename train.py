@@ -20,7 +20,7 @@ def parse_args():
     parser.add_argument('--optimizer', default='sgd', help='optimizer')
     parser.add_argument('--weight_decay', type=float, default=5e-4, help='weight decay')
     parser.add_argument('--mom', type=float, default=0.9, help='momentum')
-    parser.add_argument('--batch_size', type=int, default=256, help='batch size in each context')
+    parser.add_argument('--batch_size', type=int, default=16, help='batch size in each context')
     parser.add_argument('--checkpoint', type=str, default='BEST_checkpoint.tar', help='checkpoint')
     parser.add_argument('--print_freq', type=int, default=10, help='checkpoint')
     args = parser.parse_args()
@@ -40,9 +40,9 @@ def train(args):
     if not os.path.exists(checkpoint_path):
         model = CPM()
         if args.optimizer == 'sgd':
-            optimizer = torch.optim.SGD([model.parameters()], lr=args.lr, momentum=args.mom, weight_decay=args.weight_decay)
+            optimizer = torch.optim.SGD([{'params': model.parameters()}], lr=args.lr, momentum=args.mom, weight_decay=args.weight_decay)
         else:
-            optimizer = torch.optim.Adam([model.parameters()], lr=args.lr, weight_decay=args.weight_decay)
+            optimizer = torch.optim.Adam([{'params': model.parameters()}], lr=args.lr, weight_decay=args.weight_decay)
     else:
         checkpoint = torch.load(checkpoint_path)
         model = checkpoint['model']

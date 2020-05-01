@@ -77,7 +77,7 @@ class lsp_data(Dataset):
         img = transforms.ToTensor()(img)
         heatmap = torch.tensor(heatmap)
         centermap = torch.tensor(centermap)
-        return img, heatmap, centermap.permute((2, 0, 1))
+        return img, heatmap.permute((2, 0, 1)), centermap.permute((2, 0, 1))
 
     def __len__(self):
         return len(self.images_path)
