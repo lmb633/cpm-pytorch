@@ -5,7 +5,9 @@ import math
 from data_gen import path
 import os
 import random
-from train import device
+from torchvision import transforms
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 class AverageMeter(object):
@@ -94,8 +96,8 @@ def draw_paint(img_path, kpts):
         polygon = cv2.ellipse2Poly((int(mY), int(mX)), (int(length / 2), 4), int(angle), 0, 360, 1)
         cv2.fillConvexPoly(cur_im, polygon, colors[i])
         im = cv2.addWeighted(im, 0.4, cur_im, 0.6, 0)
-    global i
-    cv2.imwrite('visualize/{0}.jpg'.format(i), im)
+    global idx
+    cv2.imwrite('visualize/{0}.jpg'.format(idx), im)
 
 
 def guassian_kernel(size_w, size_h, center_x, center_y, sigma):
@@ -105,14 +107,10 @@ def guassian_kernel(size_w, size_h, center_x, center_y, sigma):
 
 
 def test_example(model, img_path, center):
-    img = np.array(cv2.imread(img_path), dtype=np.float32)
-    # h, w, c -> c, h, w
-    img = torch.from_numpy(img.transpose((2, 0, 1)))
-    # normalize
-    # mean = [128.0, 128.0, 128.0]
-    # std = [256.0, 256.0, 256.0]
-    # for t, m, s in zip(img, mean, std):
-    #     t.sub_(m).div_(s)
+    img = cv2.imread(img_path)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = cv2.resize(img, (368, 368))
+    img = transforms.ToTensor()(img)
 
     # center-map:368*368*1
     centermap = np.zeros((368, 368, 1), dtype=np.float32)
@@ -126,11 +124,8 @@ def test_example(model, img_path, center):
     centermap = torch.unsqueeze(centermap, 0)
 
     model.eval()
-    input_var = torch.autograd.Variable(img)
-    center_var = torch.autograd.Variable(centermap)
-
     # get heatmap
-    heat1, heat2, heat3, heat4, heat5, heat6 = model(input_var, center_var)
+    heat1, heat2, heat3, heat4, heat5, heat6 = model(img, centermap)
 
     kpts = get_kpts(heat6, img_h=368.0, img_w=368.0)
 
