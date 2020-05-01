@@ -15,13 +15,12 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 def parse_args():
     parser = argparse.ArgumentParser(description='Train face network')
     # general
-    parser.add_argument('--end-epoch', type=int, default=1000, help='training epoch size.')
+    parser.add_argument('--end_epoch', type=int, default=1000, help='training epoch size.')
     parser.add_argument('--lr', type=float, default=0.1, help='start learning rate')
-    parser.add_argument('--lr-step', type=int, default=10, help='period of learning rate decay')
     parser.add_argument('--optimizer', default='sgd', help='optimizer')
-    parser.add_argument('--weight-decay', type=float, default=5e-4, help='weight decay')
+    parser.add_argument('--weight_decay', type=float, default=5e-4, help='weight decay')
     parser.add_argument('--mom', type=float, default=0.9, help='momentum')
-    parser.add_argument('--batch-size', type=int, default=256, help='batch size in each context')
+    parser.add_argument('--batch_size', type=int, default=256, help='batch size in each context')
     parser.add_argument('--checkpoint', type=str, default='BEST_checkpoint.tar', help='checkpoint')
     parser.add_argument('--print_freq', type=int, default=10, help='checkpoint')
     args = parser.parse_args()
@@ -37,7 +36,7 @@ def train(args):
     epochs_since_improvement = 0
 
     train_set = lsp_data()
-    train_loader = DataLoader(train_set, args.batchsize, shuffle=True)
+    train_loader = DataLoader(train_set, args.batch_size, shuffle=True)
     if not os.path.exists(checkpoint_path):
         model = CPM()
         if args.optimizer == 'sgd':
@@ -99,7 +98,7 @@ def train_once(trainloader, model, criterion, optimizer, losses, epoch, args):
             losses[i].update(l.data[0], img.size(0))
 
         end_time = time.time()
-        if i % args == 0:
+        if i % args.print_freq == 0:
             print('epoch: {0} iter: {1}/{2} loss: {loss.val:.4f}({loss.avg:.4f})'.format(epoch, i, len(trainloader), loss=losses[0]))
 
     return losses[0].avg
