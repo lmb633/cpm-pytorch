@@ -20,9 +20,9 @@ def parse_args():
     parser.add_argument('--optimizer', default='sgd', help='optimizer')
     parser.add_argument('--weight_decay', type=float, default=5e-4, help='weight decay')
     parser.add_argument('--mom', type=float, default=0.9, help='momentum')
-    parser.add_argument('--batch_size', type=int, default=16, help='batch size in each context')
+    parser.add_argument('--batch_size', type=int, default=1, help='batch size in each context')
     parser.add_argument('--checkpoint', type=str, default='BEST_checkpoint.tar', help='checkpoint')
-    parser.add_argument('--print_freq', type=int, default=10, help='checkpoint')
+    parser.add_argument('--print_freq', type=int, default=1, help='checkpoint')
     args = parser.parse_args()
     return args
 
@@ -38,12 +38,16 @@ def train(args):
     train_set = lsp_data()
     train_loader = DataLoader(train_set, args.batch_size, shuffle=True)
     if not os.path.exists(checkpoint_path):
+        print('========train from beginning==========')
         model = CPM()
         if args.optimizer == 'sgd':
+            print('=========use SGD=========')
             optimizer = torch.optim.SGD([{'params': model.parameters()}], lr=args.lr, momentum=args.mom, weight_decay=args.weight_decay)
         else:
+            print('=========use ADAM=========')
             optimizer = torch.optim.Adam([{'params': model.parameters()}], lr=args.lr, weight_decay=args.weight_decay)
     else:
+        print('=========load checkpoint============')
         checkpoint = torch.load(checkpoint_path)
         model = checkpoint['model']
         start_epoch = checkpoint['checkpoint'] + 1
@@ -95,9 +99,10 @@ def train_once(trainloader, model, criterion, optimizer, losses, epoch, args):
         optimizer.step()
 
         for i, l in enumerate([loss, loss1, loss2, loss3, loss4, loss5, loss6]):
-            losses[i].update(l.data[0], img.size(0))
+            losses[i].update(l.item(), img.size(0))
 
         end_time = time.time()
+        print(end_time - start_time)
         if i % args.print_freq == 0:
             print('epoch: {0} iter: {1}/{2} loss: {loss.val:.4f}({loss.avg:.4f})'.format(epoch, i, len(trainloader), loss=losses[0]))
 
