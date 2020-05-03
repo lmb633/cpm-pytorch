@@ -7,9 +7,9 @@ from torch.utils.data import DataLoader
 import os
 import time
 from model import CPM
-from utils import AverageMeter, save_checkpoint
+from utils import AverageMeter, save_checkpoint,device
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 
 
 def parse_args():

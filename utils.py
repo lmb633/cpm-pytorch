@@ -116,8 +116,8 @@ def test_example(model, sample):
     # centermap[:, :, 0] = center_map
     # centermap = torch.from_numpy(centermap.transpose((2, 0, 1)))
     img, heatmap, centermap = sample
-    img = torch.unsqueeze(img, 0)
-    centermap = torch.unsqueeze(centermap, 0)
+    img = torch.unsqueeze(img, 0).to(device)
+    centermap = torch.unsqueeze(centermap, 0).to(device)
 
     model.eval()
     # get heatmap
@@ -141,7 +141,7 @@ def test_example(model, sample):
 
 
 def visualize():
-    checkpoint = torch.load('BEST_checkpoint.tar', map_location=torch.device('cpu'))
+    checkpoint = torch.load('BEST_checkpoint.tar')
     model = checkpoint['model']
     # images_path = os.listdir(path)
     # images_path = [path + img_path for img_path in images_path]
