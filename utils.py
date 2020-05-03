@@ -71,13 +71,13 @@ def get_kpts(maps, img_h=368.0, img_w=368.0):
     return kpts
 
 
-def draw_paint(img_path, kpts):
+def draw_paint(img, kpts):
     colors = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255, 0], [85, 255, 0], [0, 255, 0],
               [0, 255, 85], [0, 255, 170], [0, 255, 255], [0, 170, 255], [0, 85, 255], [0, 0, 255]]
     limbSeq = [[13, 12], [12, 9], [12, 8], [9, 10], [8, 7], [10, 11], [7, 6], [12, 3], [12, 2], [2, 1], [1, 0], [3, 4],
                [4, 5]]
 
-    im = cv2.imread(img_path)
+    im = cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2BGR)
     # draw points
     for k in kpts:
         x = k[0]
@@ -122,13 +122,22 @@ def test_example(model, sample):
     model.eval()
     # get heatmap
     heat1, heat2, heat3, heat4, heat5, heat6 = model(img, centermap)
-
+    kpts = get_kpts(heat1, img_h=368.0, img_w=368.0)
+    print(kpts)
+    kpts = get_kpts(heat2, img_h=368.0, img_w=368.0)
+    print(kpts)
+    kpts = get_kpts(heat3, img_h=368.0, img_w=368.0)
+    print(kpts)
+    kpts = get_kpts(heat4, img_h=368.0, img_w=368.0)
+    print(kpts)
+    kpts = get_kpts(heat5, img_h=368.0, img_w=368.0)
+    print(kpts)
     kpts = get_kpts(heat6, img_h=368.0, img_w=368.0)
     print(kpts)
     kpts = get_kpts(heatmap.unsqueeze(0))
     print(kpts)
 
-    # draw_paint(img, kpts)
+    draw_paint(img, kpts)
 
 
 def visualize():
