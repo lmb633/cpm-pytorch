@@ -77,7 +77,7 @@ def draw_paint(img, kpts):
     limbSeq = [[13, 12], [12, 9], [12, 8], [9, 10], [8, 7], [10, 11], [7, 6], [12, 3], [12, 2], [2, 1], [1, 0], [3, 4],
                [4, 5]]
 
-    im = cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2BGR)
+    im = cv2.cvtColor(np.asarray(img.cpu()), cv2.COLOR_RGB2BGR)
     # draw points
     for k in kpts:
         x = k[0]
@@ -140,13 +140,14 @@ def test_example(model, sample):
     draw_paint(img, kpts)
 
 
-def visualize():
-    checkpoint = torch.load('BEST_checkpoint.tar')
-    model = checkpoint['model']
+def visualize(model=None):
+    if not model:
+        checkpoint = torch.load('BEST_checkpoint.tar')
+        model = checkpoint['model']
     # images_path = os.listdir(path)
     # images_path = [path + img_path for img_path in images_path]
     data_set = lsp_data()
-    samples = random.sample(list(data_set), 1)
+    samples = random.sample(list(data_set), 32)
     for sample in samples:
         img, heatmap, centermap = sample
         print(img.shape, heatmap.shape, centermap.shape)

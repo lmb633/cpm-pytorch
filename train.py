@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 import os
 import time
 from model import CPM
-from utils import AverageMeter, save_checkpoint,device
+from utils import AverageMeter, save_checkpoint,device,visualize
 
 
 
@@ -73,6 +73,8 @@ def train(args):
             save_checkpoint(epoch, epochs_since_improvement, model, optimizer, best_loss)
         else:
             epochs_since_improvement += 1
+        visualize(model)
+
 
 
 heat_weight = 46 * 46 * 15 / 1.0
