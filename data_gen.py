@@ -88,22 +88,6 @@ if __name__ == '__main__':
     img, heatmap, centermap = data_set[86]
     print(img.shape, heatmap.shape, centermap.shape)
 
-    # img = cv2.imread(path+'im00001.jpg')
-    # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    # img = cv2.resize(img, (368, 368))
-    # img = transforms.ToTensor()(img)
-    # def guassian_kernel(self, size_w, size_h, center_x, center_y, sigma=3.0):
-    #     gridy, gridx = np.mgrid[0:size_h, 0:size_w]
-    #     D2 = (gridx - center_x) ** 2 + (gridy - center_y) ** 2
-    #     return np.exp(-D2 / 2.0 / sigma / sigma)
-    # # center-map:368*368*1
-    # centermap = np.zeros((368, 368, 1), dtype=np.float32)
-    # center_map = guassian_kernel(size_h=368, size_w=368, center_x=center[0], center_y=center[1], sigma=3)
-    # center_map[center_map > 1] = 1
-    # center_map[center_map < 0.0099] = 0
-    # centermap[:, :, 0] = center_map
-    # centermap = torch.from_numpy(centermap.transpose((2, 0, 1)))
-
     img = transforms.ToPILImage()(img)
     img.show()
 
@@ -112,9 +96,9 @@ if __name__ == '__main__':
     background = Image.fromarray(centermap)
     background.show()
 
-    # for i in range(heatmap.shape[2]):
-    #     hm = heatmap[:, :, i]
-    #     hm = hm * 255
-    #     print(hm.shape)
-    #     hm = Image.fromarray(np.array(hm).astype(np.int))
-    #     hm.show()
+    for i in range(heatmap.shape[0]):
+        hm = heatmap[i, :, :]
+        hm = hm * 255
+        print(hm.shape)
+        hm = Image.fromarray(np.array(hm).astype(np.int))
+        hm.show()

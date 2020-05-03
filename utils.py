@@ -6,6 +6,7 @@ from data_gen import path
 import os
 import random
 from torchvision import transforms
+from data_gen import lsp_data
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -101,12 +102,6 @@ def draw_paint(img_path, kpts):
     idx += 1
 
 
-def guassian_kernel(size_w, size_h, center_x, center_y, sigma):
-    gridy, gridx = np.mgrid[0:size_h, 0:size_w]
-    D2 = (gridx - center_x) ** 2 + (gridy - center_y) ** 2
-    return np.exp(-D2 / 2.0 / sigma / sigma)
-
-
 def test_example(model, sample):
     # img = cv2.imread(img_path)
     # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -130,29 +125,26 @@ def test_example(model, sample):
 
     kpts = get_kpts(heat6, img_h=368.0, img_w=368.0)
     print(kpts)
-    kpts = get_kpts(heatmap)
+    kpts = get_kpts(heatmap.unsqueeze(0))
     print(kpts)
 
     # draw_paint(img, kpts)
 
 
-from data_gen import lsp_data
-
-
-def visualize(model):
-    global idx
-    idx = 0
+def visualize():
+    checkpoint = torch.load('BEST_checkpoint.tar', map_location=torch.device('cpu'))
+    model = checkpoint['model']
     # images_path = os.listdir(path)
     # images_path = [path + img_path for img_path in images_path]
     data_set = lsp_data()
-    samples = random.sample(data_set, 32)
+    samples = random.sample(list(data_set), 1)
     for sample in samples:
+        img, heatmap, centermap = sample
+        print(img.shape, heatmap.shape, centermap.shape)
         test_example(model, sample)
 
 
 idx = 0
 if __name__ == '__main__':
-    checkpoint = torch.load('BEST_checkpoint.tar')
-    model = checkpoint['model']
-    model = torch.nn.DataParallel(model).to(device)
-    visualize(model)
+    # model = torch.nn.DataParallel(model).to(device)
+    visualize()
