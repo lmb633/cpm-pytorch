@@ -98,6 +98,7 @@ def draw_paint(img_path, kpts):
         im = cv2.addWeighted(im, 0.4, cur_im, 0.6, 0)
     global idx
     cv2.imwrite('visualize/{0}.jpg'.format(idx), im)
+    idx += 1
 
 
 def guassian_kernel(size_w, size_h, center_x, center_y, sigma):
@@ -106,20 +107,20 @@ def guassian_kernel(size_w, size_h, center_x, center_y, sigma):
     return np.exp(-D2 / 2.0 / sigma / sigma)
 
 
-def test_example(model, img_path, center):
-    img = cv2.imread(img_path)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = cv2.resize(img, (368, 368))
-    img = transforms.ToTensor()(img)
-
-    # center-map:368*368*1
-    centermap = np.zeros((368, 368, 1), dtype=np.float32)
-    center_map = guassian_kernel(size_h=368, size_w=368, center_x=center[0], center_y=center[1], sigma=3)
-    center_map[center_map > 1] = 1
-    center_map[center_map < 0.0099] = 0
-    centermap[:, :, 0] = center_map
-    centermap = torch.from_numpy(centermap.transpose((2, 0, 1)))
-
+def test_example(model, sample):
+    # img = cv2.imread(img_path)
+    # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    # img = cv2.resize(img, (368, 368))
+    # img = transforms.ToTensor()(img)
+    #
+    # # center-map:368*368*1
+    # centermap = np.zeros((368, 368, 1), dtype=np.float32)
+    # center_map = guassian_kernel(size_h=368, size_w=368, center_x=center[0], center_y=center[1], sigma=3)
+    # center_map[center_map > 1] = 1
+    # center_map[center_map < 0.0099] = 0
+    # centermap[:, :, 0] = center_map
+    # centermap = torch.from_numpy(centermap.transpose((2, 0, 1)))
+    img, heatmap, centermap = sample
     img = torch.unsqueeze(img, 0)
     centermap = torch.unsqueeze(centermap, 0)
 
@@ -128,19 +129,25 @@ def test_example(model, img_path, center):
     heat1, heat2, heat3, heat4, heat5, heat6 = model(img, centermap)
 
     kpts = get_kpts(heat6, img_h=368.0, img_w=368.0)
+    print(kpts)
+    kpts = get_kpts(heatmap)
+    print(kpts)
 
-    draw_paint(img_path, kpts)
+    # draw_paint(img, kpts)
+
+
+from data_gen import lsp_data
 
 
 def visualize(model):
     global idx
     idx = 0
-    images_path = os.listdir(path)
-    images_path = [path + img_path for img_path in images_path]
-    sample_path = random.sample(images_path, 32)
-    for sample in sample_path:
-        center = [184, 184]
-        test_example(model, sample, center)
+    # images_path = os.listdir(path)
+    # images_path = [path + img_path for img_path in images_path]
+    data_set = lsp_data()
+    samples = random.sample(data_set, 32)
+    for sample in samples:
+        test_example(model, sample)
 
 
 idx = 0
