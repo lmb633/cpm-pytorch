@@ -76,8 +76,7 @@ def draw_paint(img, kpts):
               [0, 255, 85], [0, 255, 170], [0, 255, 255], [0, 170, 255], [0, 85, 255], [0, 0, 255]]
     limbSeq = [[13, 12], [12, 9], [12, 8], [9, 10], [8, 7], [10, 11], [7, 6], [12, 3], [12, 2], [2, 1], [1, 0], [3, 4],
                [4, 5]]
-
-    im = cv2.cvtColor(np.asarray(img.cpu()), cv2.COLOR_RGB2BGR)
+    im = cv2.cvtColor(np.asarray(img.cpu() * 255), cv2.COLOR_RGB2BGR)
     # draw points
     for k in kpts:
         x = k[0]
