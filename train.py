@@ -7,9 +7,7 @@ from torch.utils.data import DataLoader
 import os
 import time
 from model import CPM
-from utils import AverageMeter, save_checkpoint,device,visualize
-
-
+from utils import AverageMeter, save_checkpoint, device, visualize
 
 
 def parse_args():
@@ -40,6 +38,7 @@ def train(args):
     if not os.path.exists(checkpoint_path):
         print('========train from beginning==========')
         model = CPM()
+        model = torch.nn.DataParallel(model).to(device)
         if args.optimizer == 'sgd':
             print('=========use SGD=========')
             optimizer = torch.optim.SGD([{'params': model.parameters()}], lr=args.lr, momentum=args.mom, weight_decay=args.weight_decay)
@@ -50,11 +49,10 @@ def train(args):
         print('=========load checkpoint============')
         checkpoint = torch.load(checkpoint_path)
         model = checkpoint['model']
-        start_epoch = checkpoint['checkpoint'] + 1
+        start_epoch = checkpoint['epoch'] + 1
         epochs_since_improvement = checkpoint['epochs_since_improvement']
         optimizer = checkpoint['optimizer']
         best_loss = checkpoint['best_loss']
-    model = torch.nn.DataParallel(model).to(device)
     criterion = nn.MSELoss().to(device)
     losses = [AverageMeter() for _ in range(7)]
     for epoch in range(start_epoch, args.end_epoch):
@@ -65,7 +63,7 @@ def train(args):
             model = checkpoint['model']
             optimizer = checkpoint['optimizer']
             best_loss = checkpoint['best_loss']
-            model = torch.nn.DataParallel(model).to(device)
+            # model = torch.nn.DataParallel(model).to(device)
         loss = train_once(train_loader, model, criterion, optimizer, losses, epoch, args)
         if loss < best_loss:
             best_loss = loss
@@ -76,24 +74,24 @@ def train(args):
         visualize(model)
 
 
-
 heat_weight = 46 * 46 * 15 / 1.0
 
 
 def train_once(trainloader, model, criterion, optimizer, losses, epoch, args):
-    for i, (img, heatmap, centermap) in enumerate(trainloader):
+    for i, (img, heatmap, centermap, mask) in enumerate(trainloader):
         start_time = time.time()
         img = img.to(device)
         heatmap = heatmap.to(device)
         centermap = centermap.to(device)
+        mask = mask.to(device).unsqueeze(dim=2).unsqueeze(dim=3)
 
         heatmap1, heatmap2, heatmap3, heatmap4, heatmap5, heatmap6 = model(img, centermap)
-        loss1 = criterion(heatmap1, heatmap) * heat_weight
-        loss2 = criterion(heatmap2, heatmap) * heat_weight
-        loss3 = criterion(heatmap3, heatmap) * heat_weight
-        loss4 = criterion(heatmap4, heatmap) * heat_weight
-        loss5 = criterion(heatmap5, heatmap) * heat_weight
-        loss6 = criterion(heatmap6, heatmap) * heat_weight
+        loss1 = criterion(heatmap1 * mask, heatmap * mask) * heat_weight
+        loss2 = criterion(heatmap2 * mask, heatmap * mask) * heat_weight
+        loss3 = criterion(heatmap3 * mask, heatmap * mask) * heat_weight
+        loss4 = criterion(heatmap4 * mask, heatmap * mask) * heat_weight
+        loss5 = criterion(heatmap5 * mask, heatmap * mask) * heat_weight
+        loss6 = criterion(heatmap6 * mask, heatmap * mask) * heat_weight
 
         loss = loss1 + loss2 + loss3 + loss4 + loss5 + loss6
         optimizer.zero_grad()
@@ -104,7 +102,7 @@ def train_once(trainloader, model, criterion, optimizer, losses, epoch, args):
             losses[j].update(l.item(), img.size(0))
 
         end_time = time.time()
-        print(end_time - start_time,loss)
+        print(end_time - start_time, loss)
         if i % args.print_freq == 0:
             print('epoch: {0} iter: {1}/{2} loss: {loss.val:.4f}({loss.avg:.4f})'.format(epoch, i, len(trainloader), loss=losses[0]))
 

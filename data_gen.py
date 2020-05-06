@@ -77,7 +77,10 @@ class lsp_data(Dataset):
         img = transforms.ToTensor()(img)
         heatmap = torch.tensor(heatmap)
         centermap = torch.tensor(centermap)
-        return img, heatmap.permute((2, 0, 1)), centermap.permute((2, 0, 1))
+        mask = torch.tensor(np.array(kpts)[:, 2])
+        mask = torch.cat([torch.tensor([1.], dtype=float), mask])
+        # kpts = torch.tensor(np.array(kpts)[:, 0:2])
+        return img, heatmap.permute((2, 0, 1)), centermap.permute((2, 0, 1)), mask
 
     def __len__(self):
         return len(self.images_path)
@@ -85,8 +88,10 @@ class lsp_data(Dataset):
 
 if __name__ == '__main__':
     data_set = lsp_data()
-    img, heatmap, centermap = data_set[86]
-    print(img.shape, heatmap.shape, centermap.shape)
+    img, heatmap, centermap, mask = data_set[86]
+    print(img.shape, heatmap.shape, centermap.shape, mask.shape)
+    print(mask)
+    print(heatmap * mask.unsqueeze(dim=1).unsqueeze(dim=2))
 
     img = transforms.ToPILImage()(img)
     img.show()
@@ -96,9 +101,9 @@ if __name__ == '__main__':
     background = Image.fromarray(centermap)
     background.show()
 
-    for i in range(heatmap.shape[0]):
-        hm = heatmap[i, :, :]
-        hm = hm * 255
-        print(hm.shape)
-        hm = Image.fromarray(np.array(hm).astype(np.int))
-        hm.show()
+    # for i in range(heatmap.shape[0]):
+    #     hm = heatmap[i, :, :]
+    #     hm = hm * 255
+    #     print(hm.shape)
+    #     hm = Image.fromarray(np.array(hm).astype(np.int))
+    #     hm.show()
