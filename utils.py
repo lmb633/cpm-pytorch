@@ -134,8 +134,8 @@ def test_example(model, sample):
     print(kpts)
     kpts = get_kpts(heat6, img_h=368.0, img_w=368.0)
     print(kpts)
-    kpts = get_kpts(heatmap.unsqueeze(0))
-    print(kpts)
+    kpts0 = get_kpts(heatmap.unsqueeze(0))
+    print(kpts0)
 
     draw_paint(img, kpts)
 
