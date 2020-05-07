@@ -115,7 +115,7 @@ def test_example(model, sample):
     # center_map[center_map < 0.0099] = 0
     # centermap[:, :, 0] = center_map
     # centermap = torch.from_numpy(centermap.transpose((2, 0, 1)))
-    img, heatmap, centermap = sample
+    img, heatmap, centermap, mask = sample
     img = torch.unsqueeze(img, 0).to(device)
     centermap = torch.unsqueeze(centermap, 0).to(device)
 
@@ -149,7 +149,7 @@ def visualize(model=None):
     data_set = lsp_data()
     samples = random.sample(list(data_set), 32)
     for sample in samples:
-        img, heatmap, centermap = sample
+        img, heatmap, centermap, mask = sample
         print(img.shape, heatmap.shape, centermap.shape)
         test_example(model, sample)
 
