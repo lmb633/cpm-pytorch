@@ -157,4 +157,6 @@ def visualize(model=None):
 idx = 0
 if __name__ == '__main__':
     # model = torch.nn.DataParallel(model).to(device)
-    visualize()
+    # visualize()
+    import time
+    print(str(time.asctime()))

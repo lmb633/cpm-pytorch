@@ -79,7 +79,6 @@ heat_weight = 46 * 46 * 15 / 1.0
 
 def train_once(trainloader, model, criterion, optimizer, losses, epoch, args):
     for i, (img, heatmap, centermap, mask) in enumerate(trainloader):
-        start_time = time.time()
         img = img.to(device)
         heatmap = heatmap.to(device)
         centermap = centermap.to(device)
@@ -101,9 +100,8 @@ def train_once(trainloader, model, criterion, optimizer, losses, epoch, args):
         for j, l in enumerate([loss, loss1, loss2, loss3, loss4, loss5, loss6]):
             losses[j].update(l.item(), img.size(0))
 
-        end_time = time.time()
-        print(end_time - start_time, loss)
         if i % args.print_freq == 0:
+            print(time.asctime())
             print('epoch: {0} iter: {1}/{2} loss: {loss.val:.4f}({loss.avg:.4f})'.format(epoch, i, len(trainloader), loss=losses[0]))
 
     return losses[0].avg
