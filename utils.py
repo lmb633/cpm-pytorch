@@ -7,6 +7,9 @@ import os
 import random
 from torchvision import transforms
 from data_gen import lsp_data
+from lsp_data import guassian_kernel
+import scipy
+from lsp_data import mat_path
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -46,6 +49,7 @@ def adjust_learning_rate(optimizer, shrink_factor):
 
 
 def save_checkpoint(epoch, epochs_since_improvement, model, optimizer, best_loss):
+    print('=========== save checkpoint ============')
     state = {'epoch': epoch,
              'epochs_since_improvement': epochs_since_improvement,
              'best_loss': best_loss,
@@ -102,26 +106,71 @@ def draw_paint(img, kpts):
     idx += 1
 
 
-def test_example(model, sample):
-    # img = cv2.imread(img_path)
-    # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    # img = cv2.resize(img, (368, 368))
-    # img = transforms.ToTensor()(img)
-    #
-    # # center-map:368*368*1
-    # centermap = np.zeros((368, 368, 1), dtype=np.float32)
-    # center_map = guassian_kernel(size_h=368, size_w=368, center_x=center[0], center_y=center[1], sigma=3)
-    # center_map[center_map > 1] = 1
-    # center_map[center_map < 0.0099] = 0
-    # centermap[:, :, 0] = center_map
-    # centermap = torch.from_numpy(centermap.transpose((2, 0, 1)))
-    img, heatmap, centermap, mask = sample
-    img = torch.unsqueeze(img, 0).to(device)
-    centermap = torch.unsqueeze(centermap, 0).to(device)
+# def test_example(model, sample):
+#     # img = cv2.imread(img_path)
+#     # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+#     # img = cv2.resize(img, (368, 368))
+#     # img = transforms.ToTensor()(img)
+#     #
+#     # # center-map:368*368*1
+#     # centermap = np.zeros((368, 368, 1), dtype=np.float32)
+#     # center_map = guassian_kernel(size_h=368, size_w=368, center_x=center[0], center_y=center[1], sigma=3)
+#     # center_map[center_map > 1] = 1
+#     # center_map[center_map < 0.0099] = 0
+#     # centermap[:, :, 0] = center_map
+#     # centermap = torch.from_numpy(centermap.transpose((2, 0, 1)))
+#     img, heatmap, centermap, mask = sample
+#     img = torch.unsqueeze(img, 0).to(device)
+#     centermap = torch.unsqueeze(centermap, 0).to(device)
+#
+#     model.eval()
+#     # get heatmap
+#     heat1, heat2, heat3, heat4, heat5, heat6 = model(img, centermap)
+#     kpts = get_kpts(heat1, img_h=368.0, img_w=368.0)
+#     print(kpts)
+#     kpts = get_kpts(heat2, img_h=368.0, img_w=368.0)
+#     print(kpts)
+#     kpts = get_kpts(heat3, img_h=368.0, img_w=368.0)
+#     print(kpts)
+#     kpts = get_kpts(heat4, img_h=368.0, img_w=368.0)
+#     print(kpts)
+#     kpts = get_kpts(heat5, img_h=368.0, img_w=368.0)
+#     print(kpts)
+#     kpts = get_kpts(heat6, img_h=368.0, img_w=368.0)
+#     print(kpts)
+#     kpts0 = get_kpts(heatmap.unsqueeze(0))
+#     print(kpts0)
+#
+#     draw_paint(img, kpts)
+
+
+def test_example(model, img_path, center):
+    img = np.array(cv2.imread(img_path), dtype=np.float32)
+    # h, w, c -> c, h, w
+    img = torch.from_numpy(img.transpose((2, 0, 1)))
+    # normalize
+    mean = [128.0, 128.0, 128.0]
+    std = [256.0, 256.0, 256.0]
+    for t, m, s in zip(img, mean, std):
+        t.sub_(m).div_(s)
+
+    # center-map:368*368*1
+    centermap = np.zeros((368, 368, 1), dtype=np.float32)
+    center_map = guassian_kernel(size_h=368, size_w=368, center_x=center[0], center_y=center[1], sigma=3)
+    center_map[center_map > 1] = 1
+    center_map[center_map < 0.0099] = 0
+    centermap[:, :, 0] = center_map
+    centermap = torch.from_numpy(centermap.transpose((2, 0, 1)))
+
+    img = torch.unsqueeze(img, 0)
+    centermap = torch.unsqueeze(centermap, 0)
 
     model.eval()
+    input_var = torch.autograd.Variable(img)
+    center_var = torch.autograd.Variable(centermap)
+
     # get heatmap
-    heat1, heat2, heat3, heat4, heat5, heat6 = model(img, centermap)
+    heat1, heat2, heat3, heat4, heat5, heat6 = model(input_var, center_var)
     kpts = get_kpts(heat1, img_h=368.0, img_w=368.0)
     print(kpts)
     kpts = get_kpts(heat2, img_h=368.0, img_w=368.0)
@@ -134,29 +183,28 @@ def test_example(model, sample):
     print(kpts)
     kpts = get_kpts(heat6, img_h=368.0, img_w=368.0)
     print(kpts)
-    kpts0 = get_kpts(heatmap.unsqueeze(0))
-    print(kpts0)
 
-    draw_paint(img, kpts)
+    draw_paint(img_path, kpts)
 
 
 def visualize(model=None):
     if not model:
         checkpoint = torch.load('BEST_checkpoint.tar')
         model = checkpoint['model']
-    # images_path = os.listdir(path)
-    # images_path = [path + img_path for img_path in images_path]
-    data_set = lsp_data()
-    samples = random.sample(list(data_set), 32)
+    images_path = os.listdir(path)
+    images_path = [path + img_path for img_path in images_path]
+    # data_set = lsp_data()
+    samples = random.sample(list(images_path), 32)
+
+    mat_arr = scipy.io.loadmat(mat_path)['joints']
+    # lspnet (14,3,10000)
+    kpts = mat_arr.transpose([2, 0, 1]).tolist()
     for sample in samples:
-        img, heatmap, centermap, mask = sample
-        print(img.shape, heatmap.shape, centermap.shape)
-        test_example(model, sample)
+        idx = int(sample.split('/')[-1][2:7])
+        print(kpts[idx][:, 0:2])
+        test_example(model, sample, [184, 184])
 
 
 idx = 0
 if __name__ == '__main__':
-    # model = torch.nn.DataParallel(model).to(device)
-    # visualize()
-    import time
-    print(str(time.asctime()))
+    visualize()
