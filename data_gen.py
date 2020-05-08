@@ -90,16 +90,16 @@ if __name__ == '__main__':
     data_set = lsp_data()
     img, heatmap, centermap, mask = data_set[86]
     print(img.shape, heatmap.shape, centermap.shape, mask.shape)
-    print(mask)
-    print(heatmap * mask.unsqueeze(dim=1).unsqueeze(dim=2))
-
-    img = transforms.ToPILImage()(img)
-    img.show()
-
-    centermap = centermap * 255
-    centermap = np.array(centermap.squeeze(0)).astype(np.int)
-    background = Image.fromarray(centermap)
-    background.show()
+    # print(mask)
+    # print(heatmap * mask.unsqueeze(dim=1).unsqueeze(dim=2))
+    #
+    # img = transforms.ToPILImage()(img)
+    # img.show()
+    #
+    # centermap = centermap * 255
+    # centermap = np.array(centermap.squeeze(0)).astype(np.int)
+    # background = Image.fromarray(centermap)
+    # background.show()
 
     # for i in range(heatmap.shape[0]):
     #     hm = heatmap[i, :, :]

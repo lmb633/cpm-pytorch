@@ -75,13 +75,14 @@ def get_kpts(maps, img_h=368.0, img_w=368.0):
     return kpts
 
 
-def draw_paint(img, kpts):
+def draw_paint(img_path, kpts):
     colors = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255, 0], [85, 255, 0], [0, 255, 0],
               [0, 255, 85], [0, 255, 170], [0, 255, 255], [0, 170, 255], [0, 85, 255], [0, 0, 255]]
     limbSeq = [[13, 12], [12, 9], [12, 8], [9, 10], [8, 7], [10, 11], [7, 6], [12, 3], [12, 2], [2, 1], [1, 0], [3, 4],
                [4, 5]]
-    img = transforms.ToPILImage()(img[0].cpu())
-    im = cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2BGR)
+    # img = transforms.ToPILImage()(img[0].cpu())
+    # im = cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2BGR)
+    im = cv2.imread(img_path)
     # draw points
     for k in kpts:
         x = k[0]
@@ -145,8 +146,7 @@ def draw_paint(img, kpts):
 
 
 def test_example(model, img_path, center):
-    img = np.array(cv2.imread(img_path), dtype=np.float32)
-    # h, w, c -> c, h, w
+    img = np.array(cv2.resize(cv2.imread(img_path), (368, 368)), dtype=np.float32)
     img = torch.from_numpy(img.transpose((2, 0, 1)))
     # normalize
     mean = [128.0, 128.0, 128.0]
@@ -198,7 +198,7 @@ def visualize(model=None):
 
     mat_arr = scipy.io.loadmat(mat_path)['joints']
     # lspnet (14,3,10000)
-    kpts = mat_arr.transpose([2, 0, 1]).tolist()
+    kpts = mat_arr.transpose([2, 0, 1])
     for sample in samples:
         idx = int(sample.split('/')[-1][2:7])
         print(kpts[idx][:, 0:2])
