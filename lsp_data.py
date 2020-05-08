@@ -75,7 +75,7 @@ class LSP_Data(data.Dataset):
                                                                                  Mytransforms.RandomRotate(40),
                                                                                  Mytransforms.RandomCrop(368),
                                                                                  Mytransforms.RandomHorizontalFlip(),
-                                                                                 ])):
+                                                                                 ]), image_size=368):
         self.images_path = os.listdir(path)
         self.images_path = [path + img_path for img_path in self.images_path]
         self.img_list = sorted(self.images_path)
@@ -83,6 +83,7 @@ class LSP_Data(data.Dataset):
         self.stride = stride
         self.transformer = transformer
         self.sigma = 3.0
+        self.img_size = image_size
 
     def __getitem__(self, index):
         img_path = self.img_list[index]
@@ -94,7 +95,15 @@ class LSP_Data(data.Dataset):
         try:
             img, kpt, center = self.transformer(img, kpt, center, scale)
         except:
-            pass
+            height, width, _ = img.shape
+            h_scale = height / self.img_size
+            w_scale = width / self.img_size
+            img = cv2.resize(img, (self.img_size, self.img_size))
+            for i in range(len(kpt)):
+                kpt[i][0] = kpt[i][0] / w_scale
+                kpt[i][1] = kpt[i][1] / h_scale
+            center[0] = center[0] / w_scale
+            center[1] = center[1] / h_scale
         height, width, _ = img.shape
         heatmap = np.zeros((height // self.stride, width // self.stride, len(kpt) + 1), dtype=np.float32)
         for i in range(len(kpt)):
