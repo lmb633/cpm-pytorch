@@ -91,7 +91,10 @@ class LSP_Data(data.Dataset):
         center = self.center_list[index]
         scale = self.scale_list[index]
         # expand dataset
-        img, kpt, center = self.transformer(img, kpt, center, scale)
+        try:
+            img, kpt, center = self.transformer(img, kpt, center, scale)
+        except:
+            pass
         height, width, _ = img.shape
         heatmap = np.zeros((height // self.stride, width // self.stride, len(kpt) + 1), dtype=np.float32)
         for i in range(len(kpt)):
