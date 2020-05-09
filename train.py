@@ -72,6 +72,7 @@ def train(args):
             adjust_learning_rate(optimizer, args.shrink_factor)
             # model = torch.nn.DataParallel(model).to(device)
         loss = train_once(train_loader, model, criterion, optimizer, losses, epoch, args)
+        print('==== avg lose of epoch {0} is {1} ====='.format(epoch, loss))
         if loss < best_loss:
             print('============= loss down =============')
             best_loss = loss
@@ -87,6 +88,7 @@ heat_weight = 46 * 46 * 15 / 1.0
 
 
 def train_once(trainloader, model, criterion, optimizer, losses, epoch, args):
+    model.train()
     for i, (img, heatmap, centermap) in enumerate(trainloader):
         img = img.to(device)
         heatmap = heatmap.to(device)

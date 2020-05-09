@@ -83,6 +83,7 @@ def draw_paint(img_path, kpts):
     # img = transforms.ToPILImage()(img[0].cpu())
     # im = cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2BGR)
     im = cv2.imread(img_path)
+    im = cv2.resize(im, (368, 368))
     # draw points
     for k in kpts:
         x = k[0]
@@ -191,17 +192,18 @@ def visualize(model=None):
     if not model:
         checkpoint = torch.load('BEST_checkpoint.tar')
         model = checkpoint['model']
+    model.eval()
     images_path = os.listdir(path)
     images_path = [path + img_path for img_path in images_path]
     # data_set = lsp_data()
-    samples = random.sample(list(images_path), 32)
+    samples = random.sample(list(images_path), 8)
 
     mat_arr = scipy.io.loadmat(mat_path)['joints']
     # lspnet (14,3,10000)
     kpts = mat_arr.transpose([2, 0, 1])
     for sample in samples:
         idx = int(sample.split('/')[-1][2:7])
-        print(kpts[idx-1][:, 0:2])
+        print(kpts[idx - 1][:, 0:2])
         test_example(model, sample, [184, 184])
 
 
