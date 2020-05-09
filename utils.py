@@ -190,6 +190,7 @@ def test_example(model, img_path, center):
 
 def visualize(model=None):
     if not model:
+        print('====== model is None ======')
         checkpoint = torch.load('BEST_checkpoint.tar')
         model = checkpoint['model']
     model.eval()
