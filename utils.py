@@ -201,7 +201,7 @@ def visualize(model=None):
     kpts = mat_arr.transpose([2, 0, 1])
     for sample in samples:
         idx = int(sample.split('/')[-1][2:7])
-        print(kpts[idx][:, 0:2])
+        print(kpts[idx-1][:, 0:2])
         test_example(model, sample, [184, 184])
 
 

@@ -57,6 +57,7 @@ def train(args):
         epochs_since_improvement = checkpoint['epochs_since_improvement']
         optimizer = checkpoint['optimizer']
         best_loss = checkpoint['best_loss']
+        print('epoch: ', start_epoch, 'best_loss: ', best_loss)
     criterion = nn.MSELoss().to(device)
     for epoch in range(start_epoch, args.end_epoch):
         losses = [AverageMeter() for _ in range(7)]

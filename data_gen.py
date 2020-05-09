@@ -59,7 +59,6 @@ class lsp_data(Dataset):
         height = self.img_size
         width = self.img_size
         heatmap = np.zeros((height // self.stride, width // self.stride, len(kpts) + 1), dtype=np.float32)
-
         for i in range(len(kpts)):
             x = kpts[i][0] // self.stride
             y = kpts[i][1] // self.stride
@@ -88,22 +87,27 @@ class lsp_data(Dataset):
 
 if __name__ == '__main__':
     data_set = lsp_data()
-    img, heatmap, centermap, mask = data_set[86]
+    img, heatmap, centermap, mask = data_set[46]
     print(img.shape, heatmap.shape, centermap.shape, mask.shape)
-    # print(mask)
+    print(mask)
     # print(heatmap * mask.unsqueeze(dim=1).unsqueeze(dim=2))
-    #
-    # img = transforms.ToPILImage()(img)
-    # img.show()
-    #
-    # centermap = centermap * 255
-    # centermap = np.array(centermap.squeeze(0)).astype(np.int)
-    # background = Image.fromarray(centermap)
-    # background.show()
 
-    # for i in range(heatmap.shape[0]):
-    #     hm = heatmap[i, :, :]
-    #     hm = hm * 255
-    #     print(hm.shape)
-    #     hm = Image.fromarray(np.array(hm).astype(np.int))
-    #     hm.show()
+    img = transforms.ToPILImage()(img)
+    img.show()
+
+    centermap = centermap * 255
+    centermap = np.array(centermap.squeeze(0)).astype(np.int)
+    background = Image.fromarray(centermap)
+    background.show()
+
+    for line in heatmap[-2]:
+        print(max(line))
+    print('-------')
+    for line in heatmap[-2].permute(1, 0):
+        print(max(line))
+
+    for i in range(1):
+        hm = heatmap[i, :, :]
+        hm = hm * 255
+        hm = Image.fromarray(np.array(hm).astype(np.int))
+        hm.show()
