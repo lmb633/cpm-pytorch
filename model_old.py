@@ -151,4 +151,4 @@ if __name__ == '__main__':
     #     print(feature.shape)
     paras = model.named_parameters()
     for name, para in paras:
-        print(name, para.size())
+        print(name, para.sum())
