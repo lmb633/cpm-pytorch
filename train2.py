@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 import os
 import time
 from model_old import CPM
-from utils import AverageMeter, save_checkpoint, device, visualize, adjust_learning_rate
+from utils import AverageMeter, save_checkpoint, device, visualize, adjust_learning_rate, print_model
 import Mytransforms
 from lsp_data import LSP_Data
 
@@ -58,6 +58,7 @@ def train(args):
         optimizer = checkpoint['optimizer']
         best_loss = checkpoint['best_loss']
         print('epoch: ', start_epoch, 'best_loss: ', best_loss)
+        print_model(model)
     criterion = nn.MSELoss().to(device)
     for epoch in range(start_epoch, args.end_epoch):
         loss = train_once(train_loader, model, criterion, optimizer, args)

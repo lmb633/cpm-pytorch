@@ -55,7 +55,15 @@ def save_checkpoint(epoch, epochs_since_improvement, model, optimizer, best_loss
              'best_loss': best_loss,
              'model': model,
              'optimizer': optimizer}
+    print_model(model)
     torch.save(state, 'BEST_checkpoint.tar')
+
+
+def print_model(model, print_freq=10):
+    paras = model.named_parameters()
+    for i, (name, para) in enumerate(paras):
+        if i % print_freq == 0:
+            print(name, para.sum(), para[0].sum(), para[-1].sum())
 
 
 # def visualize(model,)

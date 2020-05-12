@@ -149,6 +149,8 @@ if __name__ == '__main__':
     # out = model(data, center_map)
     # for feature in out:
     #     print(feature.shape)
+    print_freq = 10
     paras = model.named_parameters()
-    for name, para in paras:
-        print(name, para.sum())
+    for i, (name, para) in enumerate(paras):
+        if i % print_freq == 0:
+            print(name, para.sum(), para[0].sum(), para[-1].sum())
