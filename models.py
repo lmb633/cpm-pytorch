@@ -4,7 +4,7 @@ import torch
 
 
 class CPM(nn.Module):
-    def __init__(self, k=15):
+    def __init__(self, k=14):
         super(CPM, self).__init__()
         self.k = k
         self.pool_center = nn.AvgPool2d(kernel_size=9, stride=8, padding=1)

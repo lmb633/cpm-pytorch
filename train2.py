@@ -1,109 +1,179 @@
+# -*-coding:UTF-8-*-
 import argparse
-import torch
-import torch.nn as nn
-import numpy as np
-from data_gen import lsp_data
-from torch.utils.data import DataLoader
-import os
 import time
-from models import CPM
-from utils import AverageMeter, save_checkpoint, device, print_model
-from lsp_data import LSP_Data
+import torch.optim
+import torch.nn as nn
+import torch.backends.cudnn as cudnn
+import sys
+
+sys.path.append("..")
+from utils import adjust_learning_rate, AverageMeter
+import models
+import lsp_data
+import Mytransforms
+
+import shutil
+
+batch_size = 16
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description='Train face network')
-    # general
-    parser.add_argument('--end_epoch', type=int, default=1000, help='training epoch size.')
-    parser.add_argument('--lr', type=float, default=4e-6, help='start learning rate')
-    parser.add_argument('--optimizer', default='sgd', help='optimizer')
-    parser.add_argument('--weight_decay', type=float, default=5e-4, help='weight decay')
-    parser.add_argument('--mom', type=float, default=0.9, help='momentum')
-    parser.add_argument('--batch_size', type=int, default=16, help='batch size in each context')
-    parser.add_argument('--checkpoint', type=str, default='BEST_checkpoint.tar', help='checkpoint')
-    parser.add_argument('--print_freq', type=int, default=100, help='checkpoint')
-    parser.add_argument('--shrink_factor', type=float, default=0.5, help='checkpoint')
-    args = parser.parse_args()
-    return args
+def parse():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', type=str,
+                        dest='config', help='to set the parameters')
+    parser.add_argument('--gpu', default=None, nargs='+', type=int,
+                        dest='gpu', help='the gpu used')
+    parser.add_argument('--pretrained', default='BEST_checkpoint.tar', type=str,
+                        dest='pretrained', help='the path of pretrained model')
+    parser.add_argument('--train_dir', type=str,
+                        dest='train_dir', help='the path of train file')
+    parser.add_argument('--val_dir', default=None, type=str,
+                        dest='val_dir', help='the path of val file')
+    parser.add_argument('--model_name', default='../ckpt/cpm', type=str,
+                        help='model name to save parameters')
+
+    return parser.parse_args()
 
 
-def train(args):
-    # torch.manual_seed(3)
-    # np.random.seed(3)
-    checkpoint_path = args.checkpoint
-    start_epoch = 0
-    best_loss = float('inf')
-    epochs_since_improvement = 0
+def construct_model(args):
+    model = models.CPM(k=14)
+    # load pretrained model
+    state_dict = torch.load(args.pretrained)['state_dict']
+    # from collections import OrderedDict
+    # new_state_dict = OrderedDict()
+    # for k, v in state_dict.items():
+    #     name = k[7:]
+    #     new_state_dict[name] = v
+    model.load_state_dict(state_dict)
 
-    train_set = lsp_data()
-    # train_loader = DataLoader(train_set, args.batch_size, shuffle=True)
-    train_loader = DataLoader(LSP_Data(), batch_size=args.batch_size, shuffle=True)
-    if not os.path.exists(checkpoint_path):
-        print('========train from beginning==========')
-        model = CPM()
-        model = torch.nn.DataParallel(model).to(device)
-        if args.optimizer == 'sgd':
-            print('=========use SGD=========')
-            optimizer = torch.optim.SGD([{'params': model.parameters()}], lr=args.lr, momentum=args.mom, weight_decay=args.weight_decay)
+    model = torch.nn.DataParallel(model).cuda()
+
+    return model
+
+
+def get_parameters(model, isdefault=True):
+    if isdefault:
+        return model.parameters(), [1.]
+    lr_1 = []
+    lr_2 = []
+    lr_4 = []
+    lr_8 = []
+    params_dict = dict(model.module.named_parameters())
+    for key, value in params_dict.items():
+        if ('model1_' not in key) and ('model0.' not in key):
+            if key[-4:] == 'bias':
+                lr_8.append(value)
+            else:
+                lr_4.append(value)
+        elif key[-4:] == 'bias':
+            lr_2.append(value)
         else:
-            print('=========use ADAM=========')
-            optimizer = torch.optim.Adam([{'params': model.parameters()}], lr=args.lr, weight_decay=args.weight_decay)
-    else:
-        print('=========load checkpoint============')
-        checkpoint = torch.load(checkpoint_path)
-        model = checkpoint['model']
-        start_epoch = checkpoint['epoch'] + 1
-        epochs_since_improvement = checkpoint['epochs_since_improvement']
-        optimizer = checkpoint['optimizer']
-        best_loss = checkpoint['best_loss']
-        print('epoch: ', start_epoch, 'best_loss: ', best_loss)
-        print_model(model)
-    criterion = nn.MSELoss().to(device)
-    for epoch in range(start_epoch, args.end_epoch):
-        loss = train_once(train_loader, model, criterion, optimizer, args)
-        print('==== avg lose of epoch {0} is {1} ====='.format(epoch, loss))
-        if loss < best_loss:
-            print('============= loss down =============')
-            best_loss = loss
-            epochs_since_improvement = 0
-            save_checkpoint(epoch, epochs_since_improvement, model, optimizer, best_loss)
-        else:
-            print('============== loss not improvement ============ ')
-            epochs_since_improvement += 1
-            # visualize(model)
+            lr_1.append(value)
+    params = [{'params': lr_1, 'lr': 1e-5},
+              {'params': lr_2, 'lr': 1e-5 * 2.},
+              {'params': lr_4, 'lr': 1e-5 * 4.},
+              {'params': lr_8, 'lr': 1e-5 * 8.}]
+
+    return params, [1., 2., 4., 8.]
 
 
-heat_weight = 46 * 46 * 15 / 1.0
+def train_val(model, args):
+    train_dir = args.train_dir
+    val_dir = args.val_dir
 
+    cudnn.benchmark = True
 
-def train_once(trainloader, model, criterion, optimizer, args):
+    # train
+    train_loader = torch.utils.data.DataLoader(
+        lsp_data.LSP_Data('lspet', train_dir, 8,
+                          Mytransforms.Compose([Mytransforms.RandomResized(),
+                                                Mytransforms.RandomRotate(40),
+                                                Mytransforms.RandomCrop(368),
+                                                Mytransforms.RandomHorizontalFlip(),
+                                                ])),
+        batch_size=batch_size, shuffle=True,
+        num_workers=2, pin_memory=True)
+
+    criterion = nn.MSELoss().cuda()
+
+    params, multiple = get_parameters(model, False)
+
+    optimizer = torch.optim.SGD(params, 1e-5, momentum=0)
+
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
     losses = AverageMeter()
-    model.train()
-    for i, (img, heatmap, centermap) in enumerate(trainloader):
-        img = img.to(device)
-        heatmap = heatmap.to(device)
-        centermap = centermap.to(device)
+    losses_list = [AverageMeter() for i in range(6)]
+    end = time.time()
+    iters = 0
 
-        heatmap1, heatmap2, heatmap3, heatmap4, heatmap5, heatmap6 = model(img, centermap)
+    heat_weight = 46 * 46 * 15 / 1.0
 
-        loss1 = criterion(heatmap1, heatmap) * heat_weight
-        loss2 = criterion(heatmap2, heatmap) * heat_weight
-        loss3 = criterion(heatmap3, heatmap) * heat_weight
-        loss4 = criterion(heatmap4, heatmap) * heat_weight
-        loss5 = criterion(heatmap5, heatmap) * heat_weight
-        loss6 = criterion(heatmap6, heatmap) * heat_weight
+    while iters < 1000:
 
-        loss = loss1 + loss2 + loss3 + loss4 + loss5 + loss6
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        losses.update(loss.item(), img.size(0))
-        if i % args.print_freq == 0:
-            print(time.asctime(), loss)
+        for i, (input, heatmap, centermap) in enumerate(train_loader):
 
-    return losses.avg
+            data_time.update(time.time() - end)
+
+            heatmap = heatmap.cuda(async=True)
+            centermap = centermap.cuda(async=True)
+
+            input_var = torch.autograd.Variable(input)
+            heatmap_var = torch.autograd.Variable(heatmap)
+            centermap_var = torch.autograd.Variable(centermap)
+
+            heat1, heat2, heat3, heat4, heat5, heat6 = model(input_var, centermap_var)
+
+            loss1 = criterion(heat1, heatmap_var) * heat_weight
+            loss2 = criterion(heat2, heatmap_var) * heat_weight
+            loss3 = criterion(heat3, heatmap_var) * heat_weight
+            loss4 = criterion(heat4, heatmap_var) * heat_weight
+            loss5 = criterion(heat5, heatmap_var) * heat_weight
+            loss6 = criterion(heat6, heatmap_var) * heat_weight
+
+            loss = loss1 + loss2 + loss3 + loss4 + loss5 + loss6
+            losses.update(loss.data[0], input.size(0))
+            for cnt, l in enumerate(
+                    [loss1, loss2, loss3, loss4, loss5, loss6]):
+                losses_list[cnt].update(l.data[0], input.size(0))
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            batch_time.update(time.time() - end)
+            end = time.time()
+
+            iters += 1
+            if iters % 100 == 0:
+                print('Train Iteration: {0}\t'
+                      'Loss = {loss.val:.8f} (ave = {loss.avg:.8f})\n'.format(
+                    iters, loss=losses))
+                for cnt in range(0, 6):
+                    print('Loss{0} = {loss1.val:.8f} (ave = {loss1.avg:.8f})\t'
+                          .format(cnt + 1, loss1=losses_list[cnt]))
+
+                print(time.strftime(
+                    '%Y-%m-%d %H:%M:%S -----------------------------------------------------------------------------------------------------------------\n', time.localtime()))
+
+                batch_time.reset()
+                data_time.reset()
+                losses.reset()
+                for cnt in range(6):
+                    losses_list[cnt].reset()
+
+            save_checkpoint({
+                'iter': iters,
+                'state_dict': model.state_dict(),
+            })
+
+
+def save_checkpoint(state):
+    torch.save(state, 'BEST_checkpoint.tar')
 
 
 if __name__ == '__main__':
-    args = parse_args()
-    train(args)
+    # os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+    args = parse()
+    model = construct_model(args)
+    train_val(model, args)

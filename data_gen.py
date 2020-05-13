@@ -90,24 +90,24 @@ if __name__ == '__main__':
     img, heatmap, centermap, mask = data_set[46]
     print(img.shape, heatmap.shape, centermap.shape, mask.shape)
     print(mask)
-    # print(heatmap * mask.unsqueeze(dim=1).unsqueeze(dim=2))
-
-    img = transforms.ToPILImage()(img)
-    img.show()
-
-    centermap = centermap * 255
-    centermap = np.array(centermap.squeeze(0)).astype(np.int)
-    background = Image.fromarray(centermap)
-    background.show()
-
-    for line in heatmap[-2]:
-        print(max(line))
-    print('-------')
-    for line in heatmap[-2].permute(1, 0):
-        print(max(line))
-
-    for i in range(1):
-        hm = heatmap[i, :, :]
-        hm = hm * 255
-        hm = Image.fromarray(np.array(hm).astype(np.int))
-        hm.show()
+    # # print(heatmap * mask.unsqueeze(dim=1).unsqueeze(dim=2))
+    #
+    # img = transforms.ToPILImage()(img)
+    # img.show()
+    #
+    # centermap = centermap * 255
+    # centermap = np.array(centermap.squeeze(0)).astype(np.int)
+    # background = Image.fromarray(centermap)
+    # background.show()
+    #
+    # for line in heatmap[-2]:
+    #     print(max(line))
+    # print('-------')
+    # for line in heatmap[-2].permute(1, 0):
+    #     print(max(line))
+    #
+    # for i in range(1):
+    #     hm = heatmap[i, :, :]
+    #     hm = hm * 255
+    #     hm = Image.fromarray(np.array(hm).astype(np.int))
+    #     hm.show()
