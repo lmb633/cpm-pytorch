@@ -38,13 +38,15 @@ def parse():
 def construct_model(args):
     model = models.CPM(k=14)
     # load pretrained model
-    state_dict = torch.load(args.pretrained)['state_dict']
-    # from collections import OrderedDict
-    # new_state_dict = OrderedDict()
-    # for k, v in state_dict.items():
-    #     name = k[7:]
-    #     new_state_dict[name] = v
-    model.load_state_dict(state_dict)
+    import os
+    if os.path.exists(args.pretrained):
+        state_dict = torch.load(args.pretrained)['state_dict']
+        # from collections import OrderedDict
+        # new_state_dict = OrderedDict()
+        # for k, v in state_dict.items():
+        #     name = k[7:]
+        #     new_state_dict[name] = v
+        model.load_state_dict(state_dict)
 
     model = torch.nn.DataParallel(model).cuda()
 
