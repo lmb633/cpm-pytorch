@@ -19,8 +19,8 @@ def parse_args():
     parser.add_argument('--lr', type=float, default=4e-6, help='start learning rate')
     parser.add_argument('--optimizer', default='sgd', help='optimizer')
     parser.add_argument('--weight_decay', type=float, default=5e-4, help='weight decay')
-    parser.add_argument('--mom', type=float, default=0.9, help='momentum')
-    parser.add_argument('--batch_size', type=int, default=16, help='batch size in each context')
+    parser.add_argument('--mom', type=float, default=0.0, help='momentum')
+    parser.add_argument('--batch_size', type=int, default=32, help='batch size in each context')
     parser.add_argument('--checkpoint', type=str, default='BEST_checkpoint.tar', help='checkpoint')
     parser.add_argument('--print_freq', type=int, default=100, help='checkpoint')
     parser.add_argument('--shrink_factor', type=float, default=0.5, help='checkpoint')
@@ -51,7 +51,9 @@ def train(args):
     else:
         print('=========load checkpoint============')
         checkpoint = torch.load(checkpoint_path)
-        model = checkpoint['model']
+        model = CPM()
+        model = torch.nn.DataParallel(model).to(device)
+        model.load_state_dict(checkpoint['model'])
         start_epoch = checkpoint['epoch'] + 1
         epochs_since_improvement = checkpoint['epochs_since_improvement']
         optimizer = checkpoint['optimizer']
@@ -65,7 +67,9 @@ def train(args):
         if epochs_since_improvement > 0 and epochs_since_improvement % 2 == 0:
             print('============= reload model ,adjust lr ===============')
             checkpoint = torch.load(checkpoint_path)
-            model = checkpoint['model']
+            model = CPM()
+            model = torch.nn.DataParallel(model).to(device)
+            model.load_state_dict(checkpoint['model'])
             optimizer = checkpoint['optimizer']
             best_loss = checkpoint['best_loss']
             adjust_learning_rate(optimizer, args.shrink_factor)

@@ -53,7 +53,7 @@ def save_checkpoint(epoch, epochs_since_improvement, model, optimizer, best_loss
     state = {'epoch': epoch,
              'epochs_since_improvement': epochs_since_improvement,
              'best_loss': best_loss,
-             'model': model,
+             'model': model.state_dict(),
              'optimizer': optimizer}
     print_model(model)
     torch.save(state, 'BEST_checkpoint.tar')
