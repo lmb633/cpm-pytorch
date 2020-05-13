@@ -87,12 +87,7 @@ def train_val(model, args):
 
     # train
     train_loader = torch.utils.data.DataLoader(
-        lsp_data.LSP_Data('lspet', train_dir, 8,
-                          Mytransforms.Compose([Mytransforms.RandomResized(),
-                                                Mytransforms.RandomRotate(40),
-                                                Mytransforms.RandomCrop(368),
-                                                Mytransforms.RandomHorizontalFlip(),
-                                                ])),
+        lsp_data.LSP_Data(),
         batch_size=batch_size, shuffle=True,
         num_workers=2, pin_memory=True)
 

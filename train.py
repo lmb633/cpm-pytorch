@@ -36,7 +36,6 @@ def train(args):
     best_loss = float('inf')
     epochs_since_improvement = 0
 
-    train_set = lsp_data()
     # train_loader = DataLoader(train_set, args.batch_size, shuffle=True)
     train_loader = DataLoader(LSP_Data(), batch_size=args.batch_size, shuffle=True)
     if not os.path.exists(checkpoint_path):
