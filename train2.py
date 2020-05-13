@@ -106,7 +106,7 @@ def train_val(model, args):
 
     heat_weight = 46 * 46 * 15 / 1.0
 
-    while iters < 1000:
+    while iters < 10000:
 
         for i, (input, heatmap, centermap) in enumerate(train_loader):
 
@@ -143,10 +143,6 @@ def train_val(model, args):
                 print('Train Iteration: {0}\t'
                       'Loss = {loss.val:.8f} (ave = {loss.avg:.8f})\n'.format(
                     iters, loss=losses))
-                for cnt in range(0, 6):
-                    print('Loss{0} = {loss1.val:.8f} (ave = {loss1.avg:.8f})\t'
-                          .format(cnt + 1, loss1=losses_list[cnt]))
-
                 print(time.strftime(
                     '%Y-%m-%d %H:%M:%S -----------------------------------------------------------------------------------------------------------------\n', time.localtime()))
 
@@ -156,10 +152,10 @@ def train_val(model, args):
                 for cnt in range(6):
                     losses_list[cnt].reset()
 
-            save_checkpoint({
-                'iter': iters,
-                'state_dict': model.state_dict(),
-            })
+                save_checkpoint({
+                    'iter': iters,
+                    'state_dict': model.state_dict(),
+                })
 
 
 def save_checkpoint(state):
