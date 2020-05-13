@@ -129,10 +129,7 @@ def train_val(model, args):
             loss6 = criterion(heat6, heatmap_var) * heat_weight
 
             loss = loss1 + loss2 + loss3 + loss4 + loss5 + loss6
-            losses.update(loss.data[0], input.size(0))
-            for cnt, l in enumerate(
-                    [loss1, loss2, loss3, loss4, loss5, loss6]):
-                losses_list[cnt].update(l.data[0], input.size(0))
+            losses.update(loss.item(), input.size(0))
 
             optimizer.zero_grad()
             loss.backward()
