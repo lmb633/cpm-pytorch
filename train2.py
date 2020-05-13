@@ -37,6 +37,7 @@ def parse():
 
 def construct_model(args):
     model = models.CPM(k=14)
+    model = torch.nn.DataParallel(model).cuda()
     # load pretrained model
     import os
     if os.path.exists(args.pretrained):
@@ -47,9 +48,6 @@ def construct_model(args):
         #     name = k[7:]
         #     new_state_dict[name] = v
         model.load_state_dict(state_dict)
-
-    model = torch.nn.DataParallel(model).cuda()
-
     return model
 
 
