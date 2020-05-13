@@ -6,9 +6,8 @@ from data_gen import lsp_data
 from torch.utils.data import DataLoader
 import os
 import time
-from model_old import CPM
-from utils import AverageMeter, save_checkpoint, device, visualize, adjust_learning_rate, print_model
-import Mytransforms
+from models import CPM
+from utils import AverageMeter, save_checkpoint, device, print_model
 from lsp_data import LSP_Data
 
 
