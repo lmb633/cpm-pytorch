@@ -1,15 +1,15 @@
-import torch
-import numpy as np
-import cv2
 import math
-from data_gen import path
 import os
 import random
-from torchvision import transforms
-from data_gen import lsp_data
-from lsp_data import guassian_kernel
+
+import cv2
+import numpy as np
 import scipy
-from lsp_data import mat_path
+import torch
+
+from data_gen import path
+from trash.lsp_data import guassian_kernel
+from trash.lsp_data import mat_path
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -55,7 +55,6 @@ def save_checkpoint(epoch, epochs_since_improvement, model, optimizer, best_loss
              'best_loss': best_loss,
              'model': model.state_dict(),
              'optimizer': optimizer}
-    print_model(model)
     torch.save(state, 'BEST_checkpoint.tar')
 
 

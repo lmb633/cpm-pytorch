@@ -1,15 +1,14 @@
 import argparse
-import torch
-import torch.nn as nn
-import numpy as np
-from data_gen import lsp_data
-from torch.utils.data import DataLoader
 import os
 import time
-from model_old import CPM
+
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+
+from data_gen import lsp_data
+from models import CPM
 from utils import AverageMeter, save_checkpoint, device, visualize, adjust_learning_rate
-import Mytransforms
-from lsp_data import LSP_Data
 
 
 def parse_args():
@@ -37,7 +36,7 @@ def train(args):
     epochs_since_improvement = 0
 
     # train_loader = DataLoader(train_set, args.batch_size, shuffle=True)
-    train_loader = DataLoader(LSP_Data(), batch_size=args.batch_size, shuffle=True)
+    train_loader = DataLoader(lsp_data(), batch_size=args.batch_size, shuffle=True)
     if not os.path.exists(checkpoint_path):
         print('========train from beginning==========')
         model = CPM()

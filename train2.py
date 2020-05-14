@@ -1,18 +1,17 @@
 # -*-coding:UTF-8-*-
 import argparse
-import time
-import torch.optim
-import torch.nn as nn
-import torch.backends.cudnn as cudnn
 import sys
+import time
+
+import torch.backends.cudnn as cudnn
+import torch.nn as nn
+import torch.optim
 
 sys.path.append("..")
-from utils import adjust_learning_rate, AverageMeter
+from utils import AverageMeter
 import models
-import lsp_data
-import Mytransforms
-
-import shutil
+import data_gen
+import os
 
 batch_size = 16
 
@@ -25,28 +24,14 @@ def parse():
                         dest='gpu', help='the gpu used')
     parser.add_argument('--pretrained', default='BEST_checkpoint.tar', type=str,
                         dest='pretrained', help='the path of pretrained model')
-    parser.add_argument('--train_dir', type=str,
-                        dest='train_dir', help='the path of train file')
-    parser.add_argument('--val_dir', default=None, type=str,
-                        dest='val_dir', help='the path of val file')
-    parser.add_argument('--model_name', default='../ckpt/cpm', type=str,
-                        help='model name to save parameters')
-
     return parser.parse_args()
 
 
 def construct_model(args):
     model = models.CPM(k=14)
     model = torch.nn.DataParallel(model).cuda()
-    # load pretrained model
-    import os
     if os.path.exists(args.pretrained):
         state_dict = torch.load(args.pretrained)['state_dict']
-        # from collections import OrderedDict
-        # new_state_dict = OrderedDict()
-        # for k, v in state_dict.items():
-        #     name = k[7:]
-        #     new_state_dict[name] = v
         model.load_state_dict(state_dict)
     return model
 
@@ -85,26 +70,23 @@ def train_val(model, args):
 
     # train
     train_loader = torch.utils.data.DataLoader(
-        lsp_data.LSP_Data(),
+        data_gen.lsp_data(),
         batch_size=batch_size, shuffle=True,
         num_workers=2, pin_memory=True)
 
     criterion = nn.MSELoss().cuda()
-
     params, multiple = get_parameters(model, False)
-
     optimizer = torch.optim.SGD(params, 1e-5, momentum=0)
 
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
-    losses_list = [AverageMeter() for i in range(6)]
     end = time.time()
     iters = 0
 
     heat_weight = 46 * 46 * 15 / 1.0
 
-    while iters < 10000:
+    while iters < 100000:
 
         for i, (input, heatmap, centermap) in enumerate(train_loader):
 
@@ -142,13 +124,11 @@ def train_val(model, args):
                       'Loss = {loss.val:.8f} (ave = {loss.avg:.8f})\n'.format(
                     iters, loss=losses))
                 print(time.strftime(
-                    '%Y-%m-%d %H:%M:%S -----------------------------------------------------------------------------------------------------------------\n', time.localtime()))
+                    '%Y-%m-%d %H:%M:%S ----------------------------------------\n', time.localtime()))
 
                 batch_time.reset()
                 data_time.reset()
                 losses.reset()
-                for cnt in range(6):
-                    losses_list[cnt].reset()
 
                 save_checkpoint({
                     'iter': iters,

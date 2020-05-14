@@ -1,13 +1,14 @@
 # -*-coding:UTF-8-*-
 import os
-import scipy.io
-import numpy as np
-import glob
-import torch.utils.data as data
-import scipy.misc
-from PIL import Image
+
 import cv2
-import Mytransforms
+import numpy as np
+import scipy.io
+import scipy.misc
+import torch.utils.data as data
+from PIL import Image
+
+from trash import Mytransforms
 
 path = 'data/lspet_dataset/images/'
 mat_path = 'data/lspet_dataset/joints.mat'
