@@ -2,18 +2,16 @@
 import argparse
 import sys
 import time
-
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
 import torch.optim
-
 sys.path.append("..")
 from utils import AverageMeter
 import models
 import data_gen
 import os
 
-batch_size = 16
+batch_size = 32
 
 
 def parse():
