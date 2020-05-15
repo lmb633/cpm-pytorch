@@ -7,9 +7,9 @@ import numpy as np
 import scipy
 import torch
 
-from data_gen import path
-from data_gen import guassian_kernel
-from data_gen import mat_path
+from lsp_data import guassian_kernel
+from lsp_data import mat_path
+from lsp_data import path
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 

@@ -1,114 +1,39 @@
+# -*-coding:UTF-8-*-
 import argparse
-import os
+import sys
 import time
 
-import torch
+import torch.backends.cudnn as cudnn
 import torch.nn as nn
-from torch.utils.data import DataLoader
+import torch.optim
 
-from data_gen import lsp_data
-from models import CPM
-from utils import AverageMeter, save_checkpoint, device, visualize, adjust_learning_rate
+sys.path.append("..")
+from utils import AverageMeter
+import models
+from lsp_data import LSP_Data
+import os
 
-heat_weight = 46 * 46 * 15 / 1.0
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(description='Train face network')
-    # general
-    parser.add_argument('--end_epoch', type=int, default=1000, help='training epoch size.')
-    parser.add_argument('--lr', type=float, default=4e-6, help='start learning rate')
-    parser.add_argument('--optimizer', default='sgd', help='optimizer')
-    parser.add_argument('--weight_decay', type=float, default=5e-4, help='weight decay')
-    parser.add_argument('--mom', type=float, default=0.0, help='momentum')
-    parser.add_argument('--batch_size', type=int, default=32, help='batch size in each context')
-    parser.add_argument('--checkpoint', type=str, default='BEST_checkpoint.tar', help='checkpoint')
-    parser.add_argument('--print_freq', type=int, default=100, help='checkpoint')
-    parser.add_argument('--shrink_factor', type=float, default=0.5, help='checkpoint')
-    args = parser.parse_args()
-    return args
+batch_size = 32
 
 
-def train(args):
-    # torch.manual_seed(3)
-    # np.random.seed(3)
-    checkpoint_path = args.checkpoint
-    start_epoch = 0
-    best_loss = float('inf')
-    epochs_since_improvement = 0
+def parse():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', type=str,
+                        dest='config', help='to set the parameters')
+    parser.add_argument('--gpu', default=None, nargs='+', type=int,
+                        dest='gpu', help='the gpu used')
+    parser.add_argument('--pretrained', default='BEST_checkpoint.tar', type=str,
+                        dest='pretrained', help='the path of pretrained model')
+    return parser.parse_args()
 
-    # train_loader = DataLoader(train_set, args.batch_size, shuffle=True)
-    train_loader = DataLoader(lsp_data(), batch_size=args.batch_size, shuffle=True)
-    model = CPM(k=14)
+
+def construct_model(args):
+    model = models.CPM(k=14)
     model = torch.nn.DataParallel(model).cuda()
     if os.path.exists(args.pretrained):
-        state_dict = torch.load(args.pretrained)['model']
+        state_dict = torch.load(args.pretrained)['state_dict']
         model.load_state_dict(state_dict)
-        print('epoch: ', start_epoch, 'best_loss: ', best_loss)
-    params, multiple = get_parameters(model, False)
-    optimizer = torch.optim.SGD(params, 1e-5, momentum=0)
-    # if args.optimizer == 'sgd':
-    #     print('=========use SGD=========')
-    # optimizer = torch.optim.SGD([{'params': model.parameters()}], lr=args.lr, momentum=args.mom, weight_decay=args.weight_decay)
-    # else:
-    #     print('=========use ADAM=========')
-    #     optimizer = torch.optim.Adam([{'params': model.parameters()}], lr=args.lr, weight_decay=args.weight_decay)
-    criterion = nn.MSELoss().cuda()
-
-    while start_epoch < args.end_epoch:
-        # if epochs_since_improvement == 10:
-        #     break
-        # if epochs_since_improvement > 0 and epochs_since_improvement % 2 == 0:
-        #     print('============= reload model ,adjust lr ===============')
-        #     checkpoint = torch.load(checkpoint_path)
-        #     model = CPM()
-        #     model = torch.nn.DataParallel(model).to(device)
-        #     model.load_state_dict(checkpoint['model'])
-        #     optimizer = checkpoint['optimizer']
-        #     best_loss = checkpoint['best_loss']
-        #     adjust_learning_rate(optimizer, args.shrink_factor)
-        # model = torch.nn.DataParallel(model).to(device)
-        # loss = train_once(train_loader, model, criterion, optimizer, epoch, args)
-        losses = AverageMeter()
-        for i, (img, heatmap, centermap, _) in enumerate(train_loader):
-            img = img.to(device)
-            heatmap = heatmap.cuda(async=True)
-            centermap = centermap.cuda(async=True)
-
-            img = torch.autograd.Variable(img)
-            heatmap = torch.autograd.Variable(heatmap)
-            centermap = torch.autograd.Variable(centermap)
-
-            heatmap1, heatmap2, heatmap3, heatmap4, heatmap5, heatmap6 = model(img, centermap)
-            loss1 = criterion(heatmap1, heatmap) * heat_weight
-            loss2 = criterion(heatmap2, heatmap) * heat_weight
-            loss3 = criterion(heatmap3, heatmap) * heat_weight
-            loss4 = criterion(heatmap4, heatmap) * heat_weight
-            loss5 = criterion(heatmap5, heatmap) * heat_weight
-            loss6 = criterion(heatmap6, heatmap) * heat_weight
-
-            loss = loss1 + loss2 + loss3 + loss4 + loss5 + loss6
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-            losses.update(loss.item(), img.size(0))
-            start_epoch += 1
-            if i % args.print_freq == 0:
-                print(time.asctime(), loss)
-                print('epoch: {0} iter: {1}/{2} loss: {loss.val:.4f}({loss.avg:.4f})'.format(start_epoch, i, len(train_loader), loss=losses))
-                save_checkpoint(start_epoch, epochs_since_improvement, model, optimizer, loss)
-
-                # print('==== avg lose of epoch {0} is {1} ====='.format(epoch, loss))
-                # if loss < best_loss:
-                #     print('============= loss down =============')
-                #     best_loss = loss
-                #     epochs_since_improvement = 0
-                # save_checkpoint(epoch, epochs_since_improvement, model, optimizer, best_loss)
-                # else:
-                #     print('============== loss not improvement ============ ')
-                #     epochs_since_improvement += 1
-                #     # visualize(model)
+    return model
 
 
 def get_parameters(model, isdefault=True):
@@ -137,48 +62,78 @@ def get_parameters(model, isdefault=True):
     return params, [1., 2., 4., 8.]
 
 
-def train_once(trainloader, model, criterion, optimizer, epoch, args):
-    model.train()
+def train_val(model):
+    cudnn.benchmark = True
+    # train
+    train_loader = torch.utils.data.DataLoader(
+        LSP_Data(),
+        batch_size=batch_size, shuffle=True,
+        num_workers=2, pin_memory=True)
+
+    criterion = nn.MSELoss().cuda()
+    params, multiple = get_parameters(model, False)
+    optimizer = torch.optim.SGD(params, 1e-5, momentum=0)
+
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
     losses = AverageMeter()
-    for i, (img, heatmap, centermap, _) in enumerate(trainloader):
-        img = img.to(device)
-        heatmap = heatmap.to(device)
-        centermap = centermap.to(device)
+    end = time.time()
+    iters = 0
 
-        img = torch.autograd.Variable(img)
-        heatmap = torch.autograd.Variable(heatmap)
-        centermap = torch.autograd.Variable(centermap)
-        # mask = mask.to(device).unsqueeze(dim=2).unsqueeze(dim=3)
+    heat_weight = 46 * 46 * 15 / 1.0
 
-        heatmap1, heatmap2, heatmap3, heatmap4, heatmap5, heatmap6 = model(img, centermap)
-        # loss1 = criterion(heatmap1 * mask, heatmap * mask) * heat_weight
-        # loss2 = criterion(heatmap2 * mask, heatmap * mask) * heat_weight
-        # loss3 = criterion(heatmap3 * mask, heatmap * mask) * heat_weight
-        # loss4 = criterion(heatmap4 * mask, heatmap * mask) * heat_weight
-        # loss5 = criterion(heatmap5 * mask, heatmap * mask) * heat_weight
-        # loss6 = criterion(heatmap6 * mask, heatmap * mask) * heat_weight
+    while iters < 1000000:
 
-        loss1 = criterion(heatmap1, heatmap) * heat_weight
-        loss2 = criterion(heatmap2, heatmap) * heat_weight
-        loss3 = criterion(heatmap3, heatmap) * heat_weight
-        loss4 = criterion(heatmap4, heatmap) * heat_weight
-        loss5 = criterion(heatmap5, heatmap) * heat_weight
-        loss6 = criterion(heatmap6, heatmap) * heat_weight
+        for i, (input, heatmap, centermap, _) in enumerate(train_loader):
 
-        loss = loss1 + loss2 + loss3 + loss4 + loss5 + loss6
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+            data_time.update(time.time() - end)
 
-        losses.update(loss.item(), img.size(0))
+            heatmap = heatmap.cuda(async=True)
+            centermap = centermap.cuda(async=True)
 
-        if i % args.print_freq == 0:
-            print(time.asctime(), loss)
-            print('epoch: {0} iter: {1}/{2} loss: {loss.val:.4f}({loss.avg:.4f})'.format(epoch, i, len(trainloader), loss=losses))
-    print(loss)
-    return losses.avg
+            input_var = torch.autograd.Variable(input)
+            heatmap_var = torch.autograd.Variable(heatmap)
+            centermap_var = torch.autograd.Variable(centermap)
+
+            heat1, heat2, heat3, heat4, heat5, heat6 = model(input_var, centermap_var)
+
+            loss1 = criterion(heat1, heatmap_var) * heat_weight
+            loss2 = criterion(heat2, heatmap_var) * heat_weight
+            loss3 = criterion(heat3, heatmap_var) * heat_weight
+            loss4 = criterion(heat4, heatmap_var) * heat_weight
+            loss5 = criterion(heat5, heatmap_var) * heat_weight
+            loss6 = criterion(heat6, heatmap_var) * heat_weight
+
+            loss = loss1 + loss2 + loss3 + loss4 + loss5 + loss6
+            losses.update(loss.item(), input.size(0))
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            batch_time.update(time.time() - end)
+            end = time.time()
+
+            iters += 1
+            if iters % 100 == 0:
+                print('Train Iteration: {0}\t'
+                      'Loss = {loss.val:.8f} (ave = {loss.avg:.8f})\n'.format(
+                    iters, loss=losses))
+                print(time.strftime(
+                    '%Y-%m-%d %H:%M:%S ----------------------------------------\n', time.localtime()))
+
+                batch_time.reset()
+                data_time.reset()
+                losses.reset()
+                save_checkpoint({'iter': iters, 'state_dict': model.state_dict(), })
+
+
+def save_checkpoint(state):
+    torch.save(state, 'BEST_checkpoint.tar')
 
 
 if __name__ == '__main__':
-    args = parse_args()
-    train(args)
+    # os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+    args = parse()
+    model = construct_model(args)
+    train_val(model)
