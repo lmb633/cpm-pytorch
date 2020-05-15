@@ -11,6 +11,8 @@ from models import CPM
 from utils import AverageMeter, save_checkpoint, device, visualize, adjust_learning_rate
 from train2 import get_parameters
 
+heat_weight = 46 * 46 * 15 / 1.0
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train face network')
@@ -38,15 +40,10 @@ def train(args):
 
     # train_loader = DataLoader(train_set, args.batch_size, shuffle=True)
     train_loader = DataLoader(lsp_data(), batch_size=args.batch_size, shuffle=True)
+    model = CPM()
+    model = torch.nn.DataParallel(model).to(device)
     if not os.path.exists(checkpoint_path):
-        print('========train from beginning==========')
-        model = CPM()
-        model = torch.nn.DataParallel(model).to(device)
-    else:
         print('=========load checkpoint============')
-
-        model = CPM()
-        model = torch.nn.DataParallel(model).to(device)
         checkpoint = torch.load(checkpoint_path)
         model.load_state_dict(checkpoint['model'])
         start_epoch = checkpoint['epoch'] + 1
@@ -62,7 +59,8 @@ def train(args):
     #     print('=========use ADAM=========')
     #     optimizer = torch.optim.Adam([{'params': model.parameters()}], lr=args.lr, weight_decay=args.weight_decay)
     criterion = nn.MSELoss().to(device)
-    for epoch in range(start_epoch, args.end_epoch):
+
+    while start_epoch < args.end_epoch:
         # if epochs_since_improvement == 10:
         #     break
         # if epochs_since_improvement > 0 and epochs_since_improvement % 2 == 0:
@@ -75,20 +73,47 @@ def train(args):
         #     best_loss = checkpoint['best_loss']
         #     adjust_learning_rate(optimizer, args.shrink_factor)
         # model = torch.nn.DataParallel(model).to(device)
-        loss = train_once(train_loader, model, criterion, optimizer, epoch, args)
-        print('==== avg lose of epoch {0} is {1} ====='.format(epoch, loss))
-        if loss < best_loss:
-            print('============= loss down =============')
-            best_loss = loss
-            epochs_since_improvement = 0
-            save_checkpoint(epoch, epochs_since_improvement, model, optimizer, best_loss)
-        else:
-            print('============== loss not improvement ============ ')
-            epochs_since_improvement += 1
-            # visualize(model)
+        # loss = train_once(train_loader, model, criterion, optimizer, epoch, args)
+        losses = AverageMeter()
+        for i, (img, heatmap, centermap, _) in enumerate(train_loader):
+            img = img.to(device)
+            heatmap = heatmap.to(device)
+            centermap = centermap.to(device)
 
+            img = torch.autograd.Variable(img)
+            heatmap = torch.autograd.Variable(heatmap)
+            centermap = torch.autograd.Variable(centermap)
 
-heat_weight = 46 * 46 * 15 / 1.0
+            heatmap1, heatmap2, heatmap3, heatmap4, heatmap5, heatmap6 = model(img, centermap)
+            loss1 = criterion(heatmap1, heatmap) * heat_weight
+            loss2 = criterion(heatmap2, heatmap) * heat_weight
+            loss3 = criterion(heatmap3, heatmap) * heat_weight
+            loss4 = criterion(heatmap4, heatmap) * heat_weight
+            loss5 = criterion(heatmap5, heatmap) * heat_weight
+            loss6 = criterion(heatmap6, heatmap) * heat_weight
+
+            loss = loss1 + loss2 + loss3 + loss4 + loss5 + loss6
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            losses.update(loss.item(), img.size(0))
+            start_epoch += 1
+            if i % args.print_freq == 0:
+                print(time.asctime(), loss)
+                print('epoch: {0} iter: {1}/{2} loss: {loss.val:.4f}({loss.avg:.4f})'.format(start_epoch, i, len(train_loader), loss=losses))
+                save_checkpoint(start_epoch, epochs_since_improvement, model, optimizer, loss)
+
+            # print('==== avg lose of epoch {0} is {1} ====='.format(epoch, loss))
+            # if loss < best_loss:
+            #     print('============= loss down =============')
+            #     best_loss = loss
+            #     epochs_since_improvement = 0
+            # save_checkpoint(epoch, epochs_since_improvement, model, optimizer, best_loss)
+            # else:
+            #     print('============== loss not improvement ============ ')
+            #     epochs_since_improvement += 1
+            #     # visualize(model)
 
 
 def train_once(trainloader, model, criterion, optimizer, epoch, args):
