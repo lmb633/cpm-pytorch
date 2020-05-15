@@ -11,6 +11,12 @@ path = 'data/lspet_dataset/images/'
 mat_path = 'data/lspet_dataset/joints.mat'
 
 
+def guassian_kernel(self, size_w, size_h, center_x, center_y, sigma=3.0):
+    gridy, gridx = np.mgrid[0:size_h, 0:size_w]
+    D2 = (gridx - center_x) ** 2 + (gridy - center_y) ** 2
+    return np.exp(-D2 / 2.0 / sigma / sigma)
+
+
 class lsp_data(Dataset):
     def __init__(self, img_size=368, stride=8):
         self.stride = stride
@@ -35,11 +41,6 @@ class lsp_data(Dataset):
             center_y = (max(lms[i][1][lms[i][1] < h]) + min(lms[i][1][lms[i][1] > 0])) / 2
             centers.append([center_x, center_y])
         return kpts, centers
-
-    def guassian_kernel(self, size_w, size_h, center_x, center_y, sigma=3.0):
-        gridy, gridx = np.mgrid[0:size_h, 0:size_w]
-        D2 = (gridx - center_x) ** 2 + (gridy - center_y) ** 2
-        return np.exp(-D2 / 2.0 / sigma / sigma)
 
     def __getitem__(self, idx):
         image_path = self.images_path[idx]

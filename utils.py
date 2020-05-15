@@ -8,8 +8,8 @@ import scipy
 import torch
 
 from data_gen import path
-from trash.lsp_data import guassian_kernel
-from trash.lsp_data import mat_path
+from data_gen import guassian_kernel
+from data_gen import mat_path
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
