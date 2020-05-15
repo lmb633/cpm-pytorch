@@ -11,6 +11,7 @@ from models import CPM
 from utils import AverageMeter, save_checkpoint, device, visualize, adjust_learning_rate
 from train2 import get_parameters
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description='Train face network')
     # general
@@ -43,9 +44,10 @@ def train(args):
         model = torch.nn.DataParallel(model).to(device)
     else:
         print('=========load checkpoint============')
-        checkpoint = torch.load(checkpoint_path)
+
         model = CPM()
         model = torch.nn.DataParallel(model).to(device)
+        checkpoint = torch.load(checkpoint_path)
         model.load_state_dict(checkpoint['model'])
         start_epoch = checkpoint['epoch'] + 1
         epochs_since_improvement = checkpoint['epochs_since_improvement']
@@ -73,7 +75,7 @@ def train(args):
         #     optimizer = checkpoint['optimizer']
         #     best_loss = checkpoint['best_loss']
         #     adjust_learning_rate(optimizer, args.shrink_factor)
-            # model = torch.nn.DataParallel(model).to(device)
+        # model = torch.nn.DataParallel(model).to(device)
         loss = train_once(train_loader, model, criterion, optimizer, losses, epoch, args)
         print('==== avg lose of epoch {0} is {1} ====='.format(epoch, loss))
         if loss < best_loss:
@@ -96,6 +98,10 @@ def train_once(trainloader, model, criterion, optimizer, losses, epoch, args):
         img = img.to(device)
         heatmap = heatmap.to(device)
         centermap = centermap.to(device)
+
+        img = torch.autograd.Variable(img)
+        heatmap = torch.autograd.Variable(heatmap)
+        centermap = torch.autograd.Variable(centermap)
         # mask = mask.to(device).unsqueeze(dim=2).unsqueeze(dim=3)
 
         heatmap1, heatmap2, heatmap3, heatmap4, heatmap5, heatmap6 = model(img, centermap)
@@ -122,7 +128,7 @@ def train_once(trainloader, model, criterion, optimizer, losses, epoch, args):
             losses[j].update(l.item(), img.size(0))
 
         if i % args.print_freq == 0:
-            print(time.asctime())
+            print(time.asctime(), loss)
             print('epoch: {0} iter: {1}/{2} loss: {loss.val:.4f}({loss.avg:.4f})'.format(epoch, i, len(trainloader), loss=losses[0]))
             print('epoch: {0} iter: {1}/{2} loss1: {loss.val:.4f}({loss.avg:.4f})'.format(epoch, i, len(trainloader), loss=losses[1]))
             print('epoch: {0} iter: {1}/{2} loss2: {loss.val:.4f}({loss.avg:.4f})'.format(epoch, i, len(trainloader), loss=losses[2]))

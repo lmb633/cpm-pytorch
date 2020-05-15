@@ -11,7 +11,7 @@ path = 'data/lspet_dataset/images/'
 mat_path = 'data/lspet_dataset/joints.mat'
 
 
-def guassian_kernel(self, size_w, size_h, center_x, center_y, sigma=3.0):
+def guassian_kernel(size_w, size_h, center_x, center_y, sigma=3.0):
     gridy, gridx = np.mgrid[0:size_h, 0:size_w]
     D2 = (gridx - center_x) ** 2 + (gridy - center_y) ** 2
     return np.exp(-D2 / 2.0 / sigma / sigma)
@@ -63,14 +63,14 @@ class lsp_data(Dataset):
         for i in range(len(kpts)):
             x = kpts[i][0] // self.stride
             y = kpts[i][1] // self.stride
-            heat_map = self.guassian_kernel(size_h=height // self.stride, size_w=width // self.stride, center_x=x, center_y=y)
+            heat_map = guassian_kernel(size_h=height // self.stride, size_w=width // self.stride, center_x=x, center_y=y)
             heat_map[heat_map > 1] = 1
             heat_map[heat_map < 0.0099] = 0
             heatmap[:, :, i + 1] = heat_map
         heatmap[:, :, 0] = 1.0 - np.max(heatmap[:, :, 1:], axis=2)
 
         centermap = np.zeros((height, width, 1), dtype=np.float32)
-        center_map = self.guassian_kernel(size_h=height, size_w=width, center_x=center[0], center_y=center[1])
+        center_map = guassian_kernel(size_h=height, size_w=width, center_x=center[0], center_y=center[1])
         center_map[center_map > 1] = 1
         center_map[center_map < 0.0099] = 0
         centermap[:, :, 0] = center_map
