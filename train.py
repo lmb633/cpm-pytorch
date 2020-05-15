@@ -41,12 +41,6 @@ def train(args):
         print('========train from beginning==========')
         model = CPM()
         model = torch.nn.DataParallel(model).to(device)
-        if args.optimizer == 'sgd':
-            print('=========use SGD=========')
-            optimizer = torch.optim.SGD([{'params': model.parameters()}], lr=args.lr, momentum=args.mom, weight_decay=args.weight_decay)
-        else:
-            print('=========use ADAM=========')
-            optimizer = torch.optim.Adam([{'params': model.parameters()}], lr=args.lr, weight_decay=args.weight_decay)
     else:
         print('=========load checkpoint============')
         checkpoint = torch.load(checkpoint_path)
@@ -55,9 +49,14 @@ def train(args):
         model.load_state_dict(checkpoint['model'])
         start_epoch = checkpoint['epoch'] + 1
         epochs_since_improvement = checkpoint['epochs_since_improvement']
-        optimizer = checkpoint['optimizer']
         best_loss = checkpoint['best_loss']
         print('epoch: ', start_epoch, 'best_loss: ', best_loss)
+    if args.optimizer == 'sgd':
+        print('=========use SGD=========')
+        optimizer = torch.optim.SGD([{'params': model.parameters()}], lr=args.lr, momentum=args.mom, weight_decay=args.weight_decay)
+    else:
+        print('=========use ADAM=========')
+        optimizer = torch.optim.Adam([{'params': model.parameters()}], lr=args.lr, weight_decay=args.weight_decay)
     criterion = nn.MSELoss().to(device)
     for epoch in range(start_epoch, args.end_epoch):
         losses = [AverageMeter() for _ in range(7)]
@@ -83,7 +82,7 @@ def train(args):
         else:
             print('============== loss not improvement ============ ')
             epochs_since_improvement += 1
-        visualize(model)
+        # visualize(model)
 
 
 heat_weight = 46 * 46 * 15 / 1.0

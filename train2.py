@@ -5,6 +5,7 @@ import time
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
 import torch.optim
+
 sys.path.append("..")
 from utils import AverageMeter
 import models
@@ -60,12 +61,8 @@ def get_parameters(model, isdefault=True):
     return params, [1., 2., 4., 8.]
 
 
-def train_val(model, args):
-    train_dir = args.train_dir
-    val_dir = args.val_dir
-
+def train_val(model):
     cudnn.benchmark = True
-
     # train
     train_loader = torch.utils.data.DataLoader(
         data_gen.lsp_data(),
