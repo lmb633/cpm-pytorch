@@ -63,7 +63,6 @@ def train(args):
     #     optimizer = torch.optim.Adam([{'params': model.parameters()}], lr=args.lr, weight_decay=args.weight_decay)
     criterion = nn.MSELoss().to(device)
     for epoch in range(start_epoch, args.end_epoch):
-        losses = [AverageMeter() for _ in range(7)]
         # if epochs_since_improvement == 10:
         #     break
         # if epochs_since_improvement > 0 and epochs_since_improvement % 2 == 0:
@@ -76,7 +75,7 @@ def train(args):
         #     best_loss = checkpoint['best_loss']
         #     adjust_learning_rate(optimizer, args.shrink_factor)
         # model = torch.nn.DataParallel(model).to(device)
-        loss = train_once(train_loader, model, criterion, optimizer, losses, epoch, args)
+        loss = train_once(train_loader, model, criterion, optimizer, epoch, args)
         print('==== avg lose of epoch {0} is {1} ====='.format(epoch, loss))
         if loss < best_loss:
             print('============= loss down =============')
@@ -92,8 +91,9 @@ def train(args):
 heat_weight = 46 * 46 * 15 / 1.0
 
 
-def train_once(trainloader, model, criterion, optimizer, losses, epoch, args):
+def train_once(trainloader, model, criterion, optimizer, epoch, args):
     model.train()
+    losses = AverageMeter()
     for i, (img, heatmap, centermap, _) in enumerate(trainloader):
         img = img.to(device)
         heatmap = heatmap.to(device)
@@ -124,20 +124,13 @@ def train_once(trainloader, model, criterion, optimizer, losses, epoch, args):
         loss.backward()
         optimizer.step()
 
-        for j, l in enumerate([loss, loss1, loss2, loss3, loss4, loss5, loss6]):
-            losses[j].update(l.item(), img.size(0))
+        losses.update(loss.item(), img.size(0))
 
         if i % args.print_freq == 0:
             print(time.asctime(), loss)
-            print('epoch: {0} iter: {1}/{2} loss: {loss.val:.4f}({loss.avg:.4f})'.format(epoch, i, len(trainloader), loss=losses[0]))
-            print('epoch: {0} iter: {1}/{2} loss1: {loss.val:.4f}({loss.avg:.4f})'.format(epoch, i, len(trainloader), loss=losses[1]))
-            print('epoch: {0} iter: {1}/{2} loss2: {loss.val:.4f}({loss.avg:.4f})'.format(epoch, i, len(trainloader), loss=losses[2]))
-            print('epoch: {0} iter: {1}/{2} loss3: {loss.val:.4f}({loss.avg:.4f})'.format(epoch, i, len(trainloader), loss=losses[3]))
-            print('epoch: {0} iter: {1}/{2} loss4: {loss.val:.4f}({loss.avg:.4f})'.format(epoch, i, len(trainloader), loss=losses[4]))
-            print('epoch: {0} iter: {1}/{2} loss5: {loss.val:.4f}({loss.avg:.4f})'.format(epoch, i, len(trainloader), loss=losses[5]))
-            print('epoch: {0} iter: {1}/{2} loss6: {loss.val:.4f}({loss.avg:.4f})'.format(epoch, i, len(trainloader), loss=losses[6]))
-
-    return losses[0].avg
+            print('epoch: {0} iter: {1}/{2} loss: {loss.val:.4f}({loss.avg:.4f})'.format(epoch, i, len(trainloader), loss=losses))
+    print(loss)
+    return losses.avg
 
 
 if __name__ == '__main__':
