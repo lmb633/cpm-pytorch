@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from data_gen import lsp_data
 from models import CPM
 from utils import AverageMeter, save_checkpoint, device, visualize, adjust_learning_rate
-
+from train2 import get_parameters
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train face network')
@@ -51,26 +51,28 @@ def train(args):
         epochs_since_improvement = checkpoint['epochs_since_improvement']
         best_loss = checkpoint['best_loss']
         print('epoch: ', start_epoch, 'best_loss: ', best_loss)
-    if args.optimizer == 'sgd':
-        print('=========use SGD=========')
-        optimizer = torch.optim.SGD([{'params': model.parameters()}], lr=args.lr, momentum=args.mom, weight_decay=args.weight_decay)
-    else:
-        print('=========use ADAM=========')
-        optimizer = torch.optim.Adam([{'params': model.parameters()}], lr=args.lr, weight_decay=args.weight_decay)
+    params, multiple = get_parameters(model, False)
+    optimizer = torch.optim.SGD(params, 1e-5, momentum=0)
+    # if args.optimizer == 'sgd':
+    #     print('=========use SGD=========')
+    # optimizer = torch.optim.SGD([{'params': model.parameters()}], lr=args.lr, momentum=args.mom, weight_decay=args.weight_decay)
+    # else:
+    #     print('=========use ADAM=========')
+    #     optimizer = torch.optim.Adam([{'params': model.parameters()}], lr=args.lr, weight_decay=args.weight_decay)
     criterion = nn.MSELoss().to(device)
     for epoch in range(start_epoch, args.end_epoch):
         losses = [AverageMeter() for _ in range(7)]
-        if epochs_since_improvement == 10:
-            break
-        if epochs_since_improvement > 0 and epochs_since_improvement % 2 == 0:
-            print('============= reload model ,adjust lr ===============')
-            checkpoint = torch.load(checkpoint_path)
-            model = CPM()
-            model = torch.nn.DataParallel(model).to(device)
-            model.load_state_dict(checkpoint['model'])
-            optimizer = checkpoint['optimizer']
-            best_loss = checkpoint['best_loss']
-            adjust_learning_rate(optimizer, args.shrink_factor)
+        # if epochs_since_improvement == 10:
+        #     break
+        # if epochs_since_improvement > 0 and epochs_since_improvement % 2 == 0:
+        #     print('============= reload model ,adjust lr ===============')
+        #     checkpoint = torch.load(checkpoint_path)
+        #     model = CPM()
+        #     model = torch.nn.DataParallel(model).to(device)
+        #     model.load_state_dict(checkpoint['model'])
+        #     optimizer = checkpoint['optimizer']
+        #     best_loss = checkpoint['best_loss']
+        #     adjust_learning_rate(optimizer, args.shrink_factor)
             # model = torch.nn.DataParallel(model).to(device)
         loss = train_once(train_loader, model, criterion, optimizer, losses, epoch, args)
         print('==== avg lose of epoch {0} is {1} ====='.format(epoch, loss))
@@ -82,7 +84,7 @@ def train(args):
         else:
             print('============== loss not improvement ============ ')
             epochs_since_improvement += 1
-        # visualize(model)
+            # visualize(model)
 
 
 heat_weight = 46 * 46 * 15 / 1.0
@@ -90,7 +92,7 @@ heat_weight = 46 * 46 * 15 / 1.0
 
 def train_once(trainloader, model, criterion, optimizer, losses, epoch, args):
     model.train()
-    for i, (img, heatmap, centermap) in enumerate(trainloader):
+    for i, (img, heatmap, centermap, _) in enumerate(trainloader):
         img = img.to(device)
         heatmap = heatmap.to(device)
         centermap = centermap.to(device)

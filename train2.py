@@ -83,7 +83,7 @@ def train_val(model):
 
     while iters < 100000:
 
-        for i, (input, heatmap, centermap) in enumerate(train_loader):
+        for i, (input, heatmap, centermap, _) in enumerate(train_loader):
 
             data_time.update(time.time() - end)
 
@@ -139,4 +139,4 @@ if __name__ == '__main__':
     # os.environ['CUDA_VISIBLE_DEVICES'] = '0'
     args = parse()
     model = construct_model(args)
-    train_val(model, args)
+    train_val(model)
