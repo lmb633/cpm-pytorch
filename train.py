@@ -9,7 +9,6 @@ from torch.utils.data import DataLoader
 from data_gen import lsp_data
 from models import CPM
 from utils import AverageMeter, save_checkpoint, device, visualize, adjust_learning_rate
-from train2 import get_parameters
 
 heat_weight = 46 * 46 * 15 / 1.0
 
@@ -40,15 +39,11 @@ def train(args):
 
     # train_loader = DataLoader(train_set, args.batch_size, shuffle=True)
     train_loader = DataLoader(lsp_data(), batch_size=args.batch_size, shuffle=True)
-    model = CPM()
-    model = torch.nn.DataParallel(model).to(device)
-    if not os.path.exists(checkpoint_path):
-        print('=========load checkpoint============')
-        checkpoint = torch.load(checkpoint_path)
-        model.load_state_dict(checkpoint['model'])
-        start_epoch = checkpoint['epoch'] + 1
-        epochs_since_improvement = checkpoint['epochs_since_improvement']
-        best_loss = checkpoint['best_loss']
+    model = CPM(k=14)
+    model = torch.nn.DataParallel(model).cuda()
+    if os.path.exists(args.pretrained):
+        state_dict = torch.load(args.pretrained)['model']
+        model.load_state_dict(state_dict)
         print('epoch: ', start_epoch, 'best_loss: ', best_loss)
     params, multiple = get_parameters(model, False)
     optimizer = torch.optim.SGD(params, 1e-5, momentum=0)
@@ -58,7 +53,7 @@ def train(args):
     # else:
     #     print('=========use ADAM=========')
     #     optimizer = torch.optim.Adam([{'params': model.parameters()}], lr=args.lr, weight_decay=args.weight_decay)
-    criterion = nn.MSELoss().to(device)
+    criterion = nn.MSELoss().cuda()
 
     while start_epoch < args.end_epoch:
         # if epochs_since_improvement == 10:
@@ -77,8 +72,8 @@ def train(args):
         losses = AverageMeter()
         for i, (img, heatmap, centermap, _) in enumerate(train_loader):
             img = img.to(device)
-            heatmap = heatmap.to(device)
-            centermap = centermap.to(device)
+            heatmap = heatmap.cuda(async=True)
+            centermap = centermap.cuda(async=True)
 
             img = torch.autograd.Variable(img)
             heatmap = torch.autograd.Variable(heatmap)
@@ -104,16 +99,42 @@ def train(args):
                 print('epoch: {0} iter: {1}/{2} loss: {loss.val:.4f}({loss.avg:.4f})'.format(start_epoch, i, len(train_loader), loss=losses))
                 save_checkpoint(start_epoch, epochs_since_improvement, model, optimizer, loss)
 
-            # print('==== avg lose of epoch {0} is {1} ====='.format(epoch, loss))
-            # if loss < best_loss:
-            #     print('============= loss down =============')
-            #     best_loss = loss
-            #     epochs_since_improvement = 0
-            # save_checkpoint(epoch, epochs_since_improvement, model, optimizer, best_loss)
-            # else:
-            #     print('============== loss not improvement ============ ')
-            #     epochs_since_improvement += 1
-            #     # visualize(model)
+                # print('==== avg lose of epoch {0} is {1} ====='.format(epoch, loss))
+                # if loss < best_loss:
+                #     print('============= loss down =============')
+                #     best_loss = loss
+                #     epochs_since_improvement = 0
+                # save_checkpoint(epoch, epochs_since_improvement, model, optimizer, best_loss)
+                # else:
+                #     print('============== loss not improvement ============ ')
+                #     epochs_since_improvement += 1
+                #     # visualize(model)
+
+
+def get_parameters(model, isdefault=True):
+    if isdefault:
+        return model.parameters(), [1.]
+    lr_1 = []
+    lr_2 = []
+    lr_4 = []
+    lr_8 = []
+    params_dict = dict(model.module.named_parameters())
+    for key, value in params_dict.items():
+        if ('model1_' not in key) and ('model0.' not in key):
+            if key[-4:] == 'bias':
+                lr_8.append(value)
+            else:
+                lr_4.append(value)
+        elif key[-4:] == 'bias':
+            lr_2.append(value)
+        else:
+            lr_1.append(value)
+    params = [{'params': lr_1, 'lr': 1e-5},
+              {'params': lr_2, 'lr': 1e-5 * 2.},
+              {'params': lr_4, 'lr': 1e-5 * 4.},
+              {'params': lr_8, 'lr': 1e-5 * 8.}]
+
+    return params, [1., 2., 4., 8.]
 
 
 def train_once(trainloader, model, criterion, optimizer, epoch, args):
