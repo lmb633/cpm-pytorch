@@ -210,9 +210,9 @@ def test_example(model, img_path, kpts):
 
 def visualize(model=None):
     if not model:
-        print('====== model is None ======')
+        print('====== load model ======')
         checkpoint = torch.load('BEST_checkpoint.tar')
-        model = checkpoint['model']
+        model = checkpoint['state_dict']
     model.eval()
     images_path = os.listdir(path)
     images_path = [path + img_path for img_path in images_path]
