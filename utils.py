@@ -193,7 +193,6 @@ def test_example(model, img_path, kpts):
     img = torch.unsqueeze(img, 0)
     centermap = torch.unsqueeze(centermap, 0)
 
-    model.eval()
     input_var = torch.autograd.Variable(img)
     center_var = torch.autograd.Variable(centermap)
 
@@ -210,11 +209,11 @@ def test_example(model, img_path, kpts):
 
 
 def visualize(model=None):
-    # if not model:
-    #     print('====== model is None ======')
-    #     checkpoint = torch.load('BEST_checkpoint.tar')
-    #     model = checkpoint['model']
-    # model.eval()
+    if not model:
+        print('====== model is None ======')
+        checkpoint = torch.load('BEST_checkpoint.tar')
+        model = checkpoint['model']
+    model.eval()
     images_path = os.listdir(path)
     images_path = [path + img_path for img_path in images_path]
     # data_set = lsp_data()
