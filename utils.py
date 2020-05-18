@@ -10,6 +10,7 @@ import torch
 from lsp_data import guassian_kernel
 from lsp_data import mat_path
 from lsp_data import path
+from PIL import Image
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -153,9 +154,28 @@ def draw_paint(img_path, kpts):
 #     draw_paint(img, kpts)
 
 
-def test_example(model, img_path, center):
+def test_example(model, img_path, kpts):
+    print(kpts)
+    im = Image.open(img_path)
+    w = im.size[0]
+    h = im.size[1]
+    # print(w, h)
+    # print(kpts[0][kpts[0] < w].max())
+    # print(kpts[0][kpts[0] > 0].min())
+    center_x = (kpts[0][kpts[0] < w].max() +
+                kpts[0][kpts[0] > 0].min()) / 2
+    center_y = (kpts[1][kpts[1] < h].max() +
+                kpts[1][kpts[1] > 0].min()) / 2
+    # print(center_x, center_y)
+    center_x = center_x * 368 / w
+    center_y = center_y * 368 / h
+    # print(center_x, center_y)
+    # img = cv2.resize(cv2.imread(img_path), (368, 368))
     img = np.array(cv2.resize(cv2.imread(img_path), (368, 368)), dtype=np.float32)
     img = torch.from_numpy(img.transpose((2, 0, 1)))
+    # cv2.circle(img, (int(center_x), int(center_y)), radius=3, thickness=3, color=(0, 0, 255))
+    # cv2.imshow('', img)
+    # cv2.waitKey(0)
     # normalize
     mean = [128.0, 128.0, 128.0]
     std = [256.0, 256.0, 256.0]
@@ -164,7 +184,7 @@ def test_example(model, img_path, center):
 
     # center-map:368*368*1
     centermap = np.zeros((368, 368, 1), dtype=np.float32)
-    center_map = guassian_kernel(size_h=368, size_w=368, center_x=center[0], center_y=center[1], sigma=3)
+    center_map = guassian_kernel(size_h=368, size_w=368, center_x=center_x, center_y=center_y, sigma=3)
     center_map[center_map > 1] = 1
     center_map[center_map < 0.0099] = 0
     centermap[:, :, 0] = center_map
@@ -179,15 +199,9 @@ def test_example(model, img_path, center):
 
     # get heatmap
     heat1, heat2, heat3, heat4, heat5, heat6 = model(input_var, center_var)
-    kpts = get_kpts(heat1, img_h=368.0, img_w=368.0)
-    print(kpts)
     kpts = get_kpts(heat2, img_h=368.0, img_w=368.0)
     print(kpts)
-    kpts = get_kpts(heat3, img_h=368.0, img_w=368.0)
-    print(kpts)
     kpts = get_kpts(heat4, img_h=368.0, img_w=368.0)
-    print(kpts)
-    kpts = get_kpts(heat5, img_h=368.0, img_w=368.0)
     print(kpts)
     kpts = get_kpts(heat6, img_h=368.0, img_w=368.0)
     print(kpts)
@@ -196,11 +210,11 @@ def test_example(model, img_path, center):
 
 
 def visualize(model=None):
-    if not model:
-        print('====== model is None ======')
-        checkpoint = torch.load('BEST_checkpoint.tar')
-        model = checkpoint['model']
-    model.eval()
+    # if not model:
+    #     print('====== model is None ======')
+    #     checkpoint = torch.load('BEST_checkpoint.tar')
+    #     model = checkpoint['model']
+    # model.eval()
     images_path = os.listdir(path)
     images_path = [path + img_path for img_path in images_path]
     # data_set = lsp_data()
@@ -210,9 +224,10 @@ def visualize(model=None):
     # lspnet (14,3,10000)
     kpts = mat_arr.transpose([2, 0, 1])
     for sample in samples:
+        # print(sample)
         idx = int(sample.split('/')[-1][2:7])
-        print(kpts[idx - 1][:, 0:2])
-        test_example(model, sample, [184, 184])
+        # print(kpts[idx - 1][:, 0:2])
+        test_example(model, sample, kpts[idx - 1][:, 0:2].transpose([1, 0]))
 
 
 idx = 0

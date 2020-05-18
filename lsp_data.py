@@ -8,7 +8,7 @@ import scipy.misc
 import torch.utils.data as data
 from PIL import Image
 
-from trash import Mytransforms
+import Mytransforms
 
 path = 'data/lspet_dataset/images/'
 mat_path = 'data/lspet_dataset/joints.mat'
@@ -136,7 +136,7 @@ class LSP_Data(data.Dataset):
 
 if __name__ == '__main__':
     data_set = LSP_Data()
-    img, heatmap, centermap = data_set[86]
+    img, heatmap, centermap = data_set[5144]
     print(img.shape, heatmap.shape, centermap.shape)
     # from torchvision import transforms
     #
@@ -154,3 +154,9 @@ if __name__ == '__main__':
     #     print(hm.shape)
     #     hm = Image.fromarray(np.array(hm).astype(np.int))
     #     hm.show()
+
+    img_path='data/lspet_dataset/images/im00001.jpg'
+    img=Image.open(img_path)
+    print(img.size)
+    img=cv2.imread(img_path)
+    print(img.shape)

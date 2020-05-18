@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.optim
 
 sys.path.append("..")
-from utils import AverageMeter
+from utils import AverageMeter, visualize
 import models
 from lsp_data import LSP_Data
 import os
@@ -84,7 +84,7 @@ def train_val(model):
 
     while iters < 1000000:
 
-        for i, (input, heatmap, centermap, _) in enumerate(train_loader):
+        for i, (input, heatmap, centermap) in enumerate(train_loader):
 
             data_time.update(time.time() - end)
 
@@ -126,6 +126,7 @@ def train_val(model):
                 data_time.reset()
                 losses.reset()
                 save_checkpoint({'iter': iters, 'state_dict': model.state_dict(), })
+                visualize(model)
 
 
 def save_checkpoint(state):
