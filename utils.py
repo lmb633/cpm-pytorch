@@ -211,8 +211,12 @@ def test_example(model, img_path, kpts):
 def visualize(model=None):
     if not model:
         print('====== load model ======')
-        checkpoint = torch.load('BEST_checkpoint.tar')
-        model = checkpoint['state_dict']
+        import models
+        model = models.CPM(k=14)
+        model = torch.nn.DataParallel(model).cuda()
+        if os.path.exists('BEST_checkpoint.tar'):
+            state_dict = torch.load('BEST_checkpoint.tar')['state_dict']
+            model.load_state_dict(state_dict)
     model.eval()
     images_path = os.listdir(path)
     images_path = [path + img_path for img_path in images_path]
